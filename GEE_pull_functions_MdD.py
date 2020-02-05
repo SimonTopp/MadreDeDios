@@ -246,7 +246,7 @@ def lakePull(image):
       waterCount = water.reduceRegion(ee.Reducer.count(), lake.geometry().buffer(100), 30).get('Blue')
       return (image.clip(lake.geometry().buffer(100))
       .addBands(f).addBands(d).addBands(h)
-      .updateMask(f.lt(2)).updateMask(d.lt(3))
+      .updateMask(f.lt(2)).updateMask(d.eq(1).Or(d.eq(2)))
       .set({'cScore':cScore}).set({'waterCount':waterCount}))
 
     

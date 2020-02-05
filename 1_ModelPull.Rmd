@@ -121,7 +121,7 @@ for x in range(0,len(lakeID)):
 
 
 ```{r download, eval = F}
-
+## Download data from Earth Engine pull
 files <- drive_ls('MdD_OxbowPull')
 
 for (i in 1:length(files$name)){
@@ -132,10 +132,12 @@ for (i in 1:length(files$name)){
 
 paths <- list.files('OxbowPull', full.names = T)
 
+#Split file paths into water only pull and everything pull
 pathsWater <- grep(pattern = '_Water', x = paths, value = T)
 
 paths <- paths[!paths %in% pathsWater]
 
+#Map to a data frame
 df <- paths %>% map_df(read.csv) 
 
 df <- df %>%
@@ -158,6 +160,7 @@ df <- df %>%
   yearFormed = as.numeric(tail(str_split(yearsForms, pattern = '_')[[1]],1))) %>%
   ungroup()
 
+## Bunch of stuff that's messy playing around with the data
 check <- df %>%
   filter(red < 10000) %>%
   group_by(Oxbow_ID, year, season) %>%
@@ -166,9 +169,6 @@ check <- df %>%
   arrange(Oxbow_ID, year, season) %>%
   mutate(order = row_number()) %>%
   gather(red, ndvi, key = 'Measure', value = 'Reflectance')
-
-ggplot(check, aes(x = order, y = Reflectance, color = Measure)) +
-  geom_line
 
 scale2 <- function(x, na.rm = FALSE) (x - mean(x, na.rm = na.rm)) / sd(x, na.rm)
 
@@ -182,6 +182,7 @@ check <- df %>% select(OrderUp, Oxbow_ID, ndvi, ndwi, date, year, yearFormed, se
   #mutate_at(vars(ndvi:red), scale2) %>%
   gather(ndvi:ndwi, key = 'Measure', value = 'value')
 
+##  Look at formation and infilling through ndvi/ndwi
 check %>% filter(Oxbow_ID %in% c('CO_1_2007','MD_12_pre1984', 'MD_14_2015', 'MD_03_2012')
 ) %>%
   ggplot(., aes(x = date, y = value, color = Measure)) + 
@@ -193,6 +194,7 @@ check %>% filter(Oxbow_ID %in% c('CO_1_2007','MD_12_pre1984', 'MD_14_2015', 'MD_
 
 ggsave('figures/OxbowMorph.png')
 
+## Mess around with water only pull
 water <- pathsWater %>% map_df(read.csv) 
 
 water <- water %>%
@@ -216,18 +218,41 @@ water <- water %>%
   ungroup()
 
 
-water %>%
-  filter(year > yearFormed,
-         dswe > 0) %>%
-  mutate(season = factor(season, levels = c('JJA', 'SON','DJF','MAM'))) %>%
+water.filt <- water %>%
+  filter(year > yearFormed) %>%
+  mutate(season = factor(season, levels = c('JJA', 'SON','DJF','MAM')))
   #group_by(season, year) %>%
   #summarize(BR = mean(BR)) %>%
-  ggplot(., aes(x = date, y = BR, color = season)) +
-  geom_point(alpha = .2,size = 1) +
-  geom_smooth(se = F, method = 'loess') +
-  coord_cartesian(ylim=c(0,1.5)) +
-  labs(y = 'Blue/Red', title = 'Sediment Proxy by Season')
   
+  
+ggplot(water.filt %>% filter(red < 2500), aes(x = date, y = red, color = season)) +
+  geom_point(alpha = .5,size = 1) +
+  geom_smooth(se = F, method = 'lm', span = 50) +
+  #ylim(0,5000) +
+  labs(y = 'Red', title = 'Sediment Proxy by Season') +
+  facet_wrap(~OrderUp, scales = 'free')
+
+ggsave('figures/sedimentBySeason.png')
+
+water.filt %>%
+  group_by(OrderUp, season, year) %>%
+  summarize(count = n()) %>%
+  ggplot(., aes(x = season, y = count)) + 
+  geom_boxplot() +
+  theme_bw() +
+  ggtitle('Overpass counts of oxbows per season')
+  
+  group_by(season, OrderUp) %>%
+  summarize(count = mean(count)) %>%
+  ggplot(., aes(x = season, y = count)) +
+  geom_boxplot()
+  
+  
+
+
+ggsave('figures/SeasonOverpassCount.png', height = 4, width = 4, units = 'in')
+
+
 ggsave('figures/sedimentBySeason.png')
 
 ggplot(water %>% filter(red < 5000), aes(x = date, y = BR, color = OrderUp, group = Oxbow_ID)) + 
