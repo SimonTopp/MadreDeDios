@@ -33,45 +33,20 @@ ggplot(rivAreas, aes(x = year, y = area.km)) + geom_line()
 
 ```
 
-# Quick and dirty version with hand drawn polygons
-
-```{r pressure}
-files <- list.files('out', full.names = T)
-
-areas <- read_csv(files[1]) %>% mutate(source = 'BocoManu') %>%
-  bind_rows(read_csv(files[2]) %>% mutate(source = 'Co2Inam')) %>%
-  bind_rows(read_csv(files[3]) %>% mutate(source = 'CO')) %>%
-  bind_rows(read_csv(files[4]) %>% mutate(source = 'Inam2Puerto')) %>%
-  bind_rows(read_csv(files[5]) %>% mutate(source = 'Inam')) %>%
-  bind_rows(read_csv(files[6]) %>% mutate(source = 'Manu2Co'))
-
-areas <- areas %>%
-  mutate(NonRivArea = WatArea - RivArea) %>%
-  gather(RivArea,WatArea, NonRivArea, key = 'WaterType', value = 'Area') %>%
-  mutate(area.km = Area/1000000)
-
-ggplot(areas, aes(x = year, y = area.km, color = WaterType)) + geom_line() + geom_smooth(se = F, method = 'loess') + theme_bw() + facet_wrap(~source) + ggtitle('Hydroscape Surface Area Over Time')
-
-areas %>%
-  mutate(area.km = Area/1000000) %>%
-  ggplot(.,aes(x = year, y = area.km, color = source)) + geom_line() + geom_smooth(se = F, method = 'loess') + theme_bw() + ggtitle('Riverine Surface Area Over Time')
-
-```
 
 # More systematic way with HydroSHED 8 watersheds
 
 ```{r}
-drive_download('MdD_Exports/MdD_Hydroscape_TS_2year.csv', 'out/MdD_Hydroscape_TS_2year.csv')
+drive_download('MdD_Exports/MdD_Hydroscape_TS_2yearv2.csv', 'out/MdD_Hydroscape_TS_2yearv2.csv', overwrite = T)
 
-hs <- read_csv('out/MdD_Hydroscape_TS_2year.csv')
+hs <- read_csv('out/MdD_Hydroscape_TS_2yearv2.csv')
 
 basins.sf <- st_read('D:/GIS_Data/HydroSheds/hybas_sa_lev08_v1c.shp') %>%
   filter(HYBAS_ID %in% c(6080540660, 6080548660,6080540560,6080549240,6080549470,6080548950,6080552360,6080552360,6080552520, 6080546500))
 
 mapView(basins.sf)
 
-check <- hs %>%
-  select(-`system:index`) %>%
+hs <- hs %>% select(-`system:index`) %>%
   spread(feature, area) %>%
   mutate(nonRivArea = waterArea - rivArea) %>%
   gather('feature', 'area', cl, rivArea, waterArea, nonRivArea) %>%
@@ -86,23 +61,27 @@ check <- hs %>%
                                                                      ifelse(BasinID == 6080552520, 'Inambari','Inam_Puerto'))))))))),
          area.km = area/1000000) %>%
   group_by(BasinID, Basin, feature) %>%
-  mutate(area.norm = scale(area)) %>%
+  mutate(area.norm = scale(area, scale = mean(area))) %>%
   ungroup()
 
-ggplot(check %>% filter(!feature %in% c('cl', 'waterArea')), aes(x = year, y = area.norm, color = feature)) + 
+ggplot(hs %>% filter(!feature %in% c('cl', 'waterArea')), aes(x = year, y = area.norm, color = feature)) + 
   geom_point(alpha = .4) + 
   geom_smooth(se = F) + 
   facet_wrap(~Basin, scales='free') +
   theme_bw()
 
 
-ggplot(check %>% filter(!feature %in% c('cl', 'waterArea'), Basin %in% c('Colorado', 'UpstreamManuNorth')), aes(x = year, y = area.norm, color = feature)) + 
+ggplot(hs %>% filter(!feature %in% c('cl', 'waterArea'), Basin %in% c('Colorado', 'Inambari', 'Reserva', 'UpstreamManuNorth')), aes(x = year, y = area.norm, color = feature)) + 
   geom_point(alpha = .4) +
   scale_color_discrete(labels = c('Non-River Water Area', 'Riverine Water Area')) +
   geom_smooth(se = F) + 
   facet_wrap(~Basin, scales='free') +
-  labs(x = 'Year', y = 'Normalized Area', color = 'Area Type') +
+  labs(x = 'Year', y = 'Centered Area (sq. km)', color = 'Area Type') +
   theme_bw()
+
+##
+hs %>% filter(feature == 'cl') %>% 
+  ggplot(., aes(x = year, y = area.norm)) + geom_line() + facet_wrap(~Basin, scales = 'free')
 
 ##Check out erosion and accretion real quick
 drive_download('MdD_Exports/MdD_ErosAcrec_2year.csv', 'out/MdD_ErosAcrec_2year.csv', overwrite = T)
@@ -120,16 +99,16 @@ ea <- ea %>%
                                                               ifelse(BasinID == 6080552360, 'Colorado_InamEast',
                                                                      ifelse(BasinID == 6080552520, 'Inambari','Inam_Puerto'))))))))),
          area.km = area/1000000) %>%
-  group_by(BasinID, Basin) %>%
-  mutate(area.norm = scale(area)) %>%
+  group_by(BasinID, Basin, feature) %>%
+  mutate(area.norm = scale(area, scale = mean(area))) %>%
   ungroup()
 
 
-ggplot(ea, aes(x = year, y = area.km, color = feature)) + 
+ggplot(ea %>% filter(feature == 'ErosionArea'), aes(x = year, y = area.norm, color = feature)) + 
   geom_line() + 
   geom_smooth(se = F) +
   theme_bw() +
-  facet_wrap(~Basin)
+  facet_wrap(~Basin, scales = 'free')
 
 eaDiff <- ea %>%
   select(Basin, area.norm, feature, year) %>%
@@ -138,5 +117,55 @@ eaDiff <- ea %>%
 
 eaDiff %>%
   ggplot(., aes(x= year, y = AreaChange)) + geom_line() + geom_smooth(se = F) + facet_wrap(~Basin, scales = 'free_y') 
+
+
+
 ```
+
+
+## Basic Sinuosity
+
+```{r}
+##Birds eye distances by watersehed
+
+
+```
+
+
+
+```{r}
+## Check out the cocha Areas
+drive_download('MdD_Exports/Cocha_Areas_CutOff.csv', 'out/Cocha_Areas_CutOff.csv')
+
+cochaIDs <- read.csv('in/Cocha_Pond_Cords_Full.csv')
+
+cochas <- read.csv('out/Cocha_Areas_CutOff.csv') %>%
+  select(Unique_ID, year, area) %>%
+  left_join(cochaIDs) %>%
+  mutate(con2018 = ifelse(Unique_ID %in% c(3,4,5,8,9,15), T, F)) %>% mutate(version = 'Cut') %>%
+  bind_rows(read.csv('out/Cocha_Areas.csv') %>%
+  select(Unique_ID, year, area) %>%
+  left_join(cochaIDs) %>%
+  mutate(con2018 = ifelse(Unique_ID %in% c(3,4,5,8,9,15), T, F)) %>% mutate(version = 'noCutt'))
+
+cochas.sf <- cochas %>% filter(Type == 'cocha') %>% st_as_sf(coords = c('Long', 'Lat'), crs = 4326)
+mapView(cochas.sf, zcol = factor('Unique_ID'))
+
+ggplot(cochas %>% filter(Type == 'cocha', version == 'Cut'), aes(x = year, y = area/1000000, color = con2018)) + geom_line() + 
+  #geom_hline(yintercept = 1500000) + 
+  facet_wrap(~Unique_ID, scales = 'free')
+
+max(cochas$area)
+hist(cochas$area)
+
+#For jackie
+
+out <- read.csv('out/Cocha_Areas_CutOff.csv') %>%
+  select(Unique_ID, year, area) %>%
+  left_join(cochaIDs) %>%
+  mutate(Connectivity_2018 = ifelse(Unique_ID %in% c(3,4,5,8,9,15), T, F))
+
+write_csv(out, 'out/CochaAreas.csv')
+```
+
 
