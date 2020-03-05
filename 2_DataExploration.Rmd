@@ -15,38 +15,18 @@ library(mapview)
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-## R Markdown
+# First, take a look at overall hydrscape variables, riverine, non-riverine, and centerline length
 
 ```{r}
-files <- drive_ls('MdD_Exports')
-
-for(i in c(1:nrow(files))){
-  path = paste0('out/',files$name[i])
-  drive_download(as_id(files$id[i]), path, overwrite = T)
-  }
-
-
-rivAreas <- read.csv('out/AnnualRivAreas.csv') %>%
-  mutate(area.km = Area/1000000)
-
-ggplot(rivAreas, aes(x = year, y = area.km)) + geom_line()
-
-```
-
-
-# More systematic way with HydroSHED 8 watersheds
-
-```{r}
-drive_download('MdD_Exports/MdD_Hydroscape_TS_2yearv2.csv', 'out/MdD_Hydroscape_TS_2yearv2.csv', overwrite = T)
-
-hs <- read_csv('out/MdD_Hydroscape_TS_2yearv2.csv')
+drive_download('MdD_Exports/MdD_Hydroscape_TS_2yearv3.csv', 'out/MdD_Hydroscape_TS_2yearv2.csv', overwrite = T)
 
 basins.sf <- st_read('D:/GIS_Data/HydroSheds/hybas_sa_lev08_v1c.shp') %>%
   filter(HYBAS_ID %in% c(6080540660, 6080548660,6080540560,6080549240,6080549470,6080548950,6080552360,6080552360,6080552520, 6080546500))
 
 mapView(basins.sf)
 
-hs <- hs %>% select(-`system:index`) %>%
+hs <- read_csv('out/MdD_Hydroscape_TS_2yearv2.csv') %>% 
+  select(-`system:index`) %>%
   spread(feature, area) %>%
   mutate(nonRivArea = waterArea - rivArea) %>%
   gather('feature', 'area', cl, rivArea, waterArea, nonRivArea) %>%
@@ -61,17 +41,47 @@ hs <- hs %>% select(-`system:index`) %>%
                                                                      ifelse(BasinID == 6080552520, 'Inambari','Inam_Puerto'))))))))),
          area.km = area/1000000) %>%
   group_by(BasinID, Basin, feature) %>%
-  mutate(area.norm = scale(area, scale = mean(area))) %>%
+  mutate(area.percent = scale(area, scale = mean(area)),
+         diff = c(NA, diff(area.percent))) %>%
   ungroup()
 
-ggplot(hs %>% filter(!feature %in% c('cl', 'waterArea')), aes(x = year, y = area.norm, color = feature)) + 
+##Basic change over time
+ggplot(hs %>% filter(!feature %in% c('cl', 'waterArea')), aes(x = year, y = area.percent, color = feature)) + 
   geom_point(alpha = .4) + 
-  geom_smooth(se = F) + 
+  geom_smooth(se = F, span = .2) + 
+  scale_color_viridis_d(end = .6, labels = c('Lentic', 'Lotic')) +
+  facet_wrap(~Basin) +
+  theme_bw() +
+  labs(x = 'Year', y = 'Normalized Area (Area/mean Area)', color = 'Type', title = 'Change in Surface water extent')
+
+hs %>% select(feature, year, Basin, diff) %>%
+  spread(feature, diff) %>%
+  ggplot(., aes(x = cl, y = rivArea, color = year)) +
+  geom_point() + 
+  geom_abline(color = 'red') +
+  scale_color_viridis_c(end = .8) +
   facet_wrap(~Basin, scales='free') +
+  theme_bw() +
+  labs(y = expression(paste(Delta,' River Area')), x =expression(paste(Delta, ' Centerline Length')), title = 'Centerline length vs river area')
+
+
+## Take a look at Sinuosity.  The distances in the distance var are pulled out of google earth and are just
+## the distance as the bird flies from the start to the end of each channel for each basin.
+
+##Birds eye distances by watersehed
+distances = tibble(Basin = unique(hs$Basin), EucDist = c(14200, 84101, 60684, 24720, 36577, 67224+18383+7005, 55659+53012+19625, 39543, 87737))
+
+hs %>% filter(feature == 'cl') %>%
+  left_join(distances) %>%
+  mutate(sinuosity = EucDist/(area*30)) %>%
+  ggplot(., aes(x = year, y = sinuosity)) +
+  geom_point(alpha = .4) + 
+  geom_smooth(se = F, span = .2) + 
+  facet_wrap(~Basin) +
   theme_bw()
 
 
-ggplot(hs %>% filter(!feature %in% c('cl', 'waterArea'), Basin %in% c('Colorado', 'Inambari', 'Reserva', 'UpstreamManuNorth')), aes(x = year, y = area.norm, color = feature)) + 
+ggplot(hs %>% filter(!feature %in% c('cl', 'waterArea'), Basin %in% c('Colorado', 'Inambari', 'Reserva', 'UpstreamManuNorth')), aes(x = year, y = area.percent, color = feature)) + 
   geom_point(alpha = .4) +
   scale_color_discrete(labels = c('Non-River Water Area', 'Riverine Water Area')) +
   geom_smooth(se = F) + 
@@ -79,16 +89,21 @@ ggplot(hs %>% filter(!feature %in% c('cl', 'waterArea'), Basin %in% c('Colorado'
   labs(x = 'Year', y = 'Centered Area (sq. km)', color = 'Area Type') +
   theme_bw()
 
+
+
 ##
 hs %>% filter(feature == 'cl') %>% 
-  ggplot(., aes(x = year, y = area.norm)) + geom_line() + facet_wrap(~Basin, scales = 'free')
+  ggplot(., aes(x = year, y = area.percent)) + geom_line() + facet_wrap(~Basin)
 
+```
+
+## Check out Erosion and Accretion
+
+```{r}
 ##Check out erosion and accretion real quick
-drive_download('MdD_Exports/MdD_ErosAcrec_2year.csv', 'out/MdD_ErosAcrec_2year.csv', overwrite = T)
+drive_download('MdD_Exports/MdD_ErosAcrec_2yearv3.csv', 'out/MdD_ErosAcrec_2year.csv', overwrite = T)
 
-ea <- read.csv('out/MdD_ErosAcrec_2year.csv')
-
-ea <- ea %>%
+ea <- read.csv('out/MdD_ErosAcrec_2year.csv') %>%
   mutate(Basin = ifelse(BasinID == 6080540660, 'UpStreamManuSouth', 
                         ifelse(BasinID == 6080548660, 'Reserva',
                                ifelse(BasinID == 6080540560, 'UpstreamManuNorth',
@@ -100,37 +115,28 @@ ea <- ea %>%
                                                                      ifelse(BasinID == 6080552520, 'Inambari','Inam_Puerto'))))))))),
          area.km = area/1000000) %>%
   group_by(BasinID, Basin, feature) %>%
-  mutate(area.norm = scale(area, scale = mean(area))) %>%
+  mutate(area.percent = scale(area, scale = mean(area)),
+         diff = c(NA, diff(area.percent))) %>%
   ungroup()
 
 
-ggplot(ea %>% filter(feature == 'ErosionArea'), aes(x = year, y = area.norm, color = feature)) + 
-  geom_line() + 
-  geom_smooth(se = F) +
+ggplot(ea %>% filter(feature == 'AccretionArea'), aes(x = year, y = area.percent)) + 
+  #geom_point(alpha = .4) + 
+  geom_line() +
+  geom_smooth(method = 'lm') +
   theme_bw() +
-  facet_wrap(~Basin, scales = 'free')
+  facet_wrap(~Basin, scales = 'free_y') +
+  labs(x = 'Year', y = 'Scaled Erosion Rate (Erosion/Mean Erosion)', title = 'Erosion by watershed over time')
+
 
 eaDiff <- ea %>%
-  select(Basin, area.norm, feature, year) %>%
-  spread(feature, area.norm) %>%
+  select(Basin, area.percent, feature, year) %>%
+  spread(feature, area.percent) %>%
   mutate(AreaChange = AccretionArea - ErosionArea)
 
 eaDiff %>%
-  ggplot(., aes(x= year, y = AreaChange)) + geom_line() + geom_smooth(se = F) + facet_wrap(~Basin, scales = 'free_y') 
-
-
-
+  ggplot(., aes(x= year, y = AreaChange)) + geom_line() + geom_smooth(method = 'lm') + facet_wrap(~Basin) 
 ```
-
-
-## Basic Sinuosity
-
-```{r}
-##Birds eye distances by watersehed
-
-
-```
-
 
 
 ```{r}
@@ -142,13 +148,11 @@ cochaIDs <- read.csv('in/Cocha_Pond_Cords_Full.csv')
 cochas <- read.csv('out/Cocha_Areas_CutOff.csv') %>%
   select(Unique_ID, year, area) %>%
   left_join(cochaIDs) %>%
-  mutate(con2018 = ifelse(Unique_ID %in% c(3,4,5,8,9,15), T, F)) %>% mutate(version = 'Cut') %>%
-  bind_rows(read.csv('out/Cocha_Areas.csv') %>%
-  select(Unique_ID, year, area) %>%
-  left_join(cochaIDs) %>%
-  mutate(con2018 = ifelse(Unique_ID %in% c(3,4,5,8,9,15), T, F)) %>% mutate(version = 'noCutt'))
+  mutate(con2018 = ifelse(Unique_ID %in% c(3,4,5,8,9,15), T, F)) %>% mutate(version = 'Cut')
+
 
 cochas.sf <- cochas %>% filter(Type == 'cocha') %>% st_as_sf(coords = c('Long', 'Lat'), crs = 4326)
+
 mapView(cochas.sf, zcol = factor('Unique_ID'))
 
 ggplot(cochas %>% filter(Type == 'cocha', version == 'Cut'), aes(x = year, y = area/1000000, color = con2018)) + geom_line() + 
@@ -168,4 +172,22 @@ out <- read.csv('out/Cocha_Areas_CutOff.csv') %>%
 write_csv(out, 'out/CochaAreas.csv')
 ```
 
+##Forested areas
+
+```{r}
+drive_download('MdD_Exports/MdD_CochaForestLoss.csv', 'out/Cocha_ForestLoss.csv')
+drive_download('MdD_Exports/MdD_BasinForestLoss.csv', 'out/Basin_ForestLoss.csv')
+
+cochas <- read.csv('out/Cocha_ForestLoss.csv') %>%
+  select(Unique_ID, Type, year, area) %>%
+  mutate(area.km = area/1000000) %>%
+  group_by(Unique_ID) %>%
+  mutate(cumulative = cumsum(area.km)) %>%
+  ungroup()
+
+ggplot(cochas %>% filter(Type == 'cocha'), aes(x = year, y = area.km)) + geom_col() + facet_wrap(~Unique_ID) + labs(x = 'year', y = 'Forest loss (sq km)', title = 'Forest loss within 2km of Cocha')
+ggplot(cochas %>% filter(Type == 'cocha'), aes(x = year, y = cumulative)) + geom_col() + facet_wrap(~Unique_ID) + labs(x = 'year', y = 'Cumulative Forest loss (sq km)', title = 'Cumulative Forest loss within 2km of Cocha')
+
+
+```
 
