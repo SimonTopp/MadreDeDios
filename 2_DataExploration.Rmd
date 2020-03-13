@@ -175,19 +175,45 @@ write_csv(out, 'out/CochaAreas.csv')
 ##Forested areas
 
 ```{r}
-drive_download('MdD_Exports/MdD_CochaForestLoss.csv', 'out/Cocha_ForestLoss.csv')
-drive_download('MdD_Exports/MdD_BasinForestLoss.csv', 'out/Basin_ForestLoss.csv')
+drive_download('MdD_Exports/MdD_CochaDeforestation_RivRemoved.csv', 'out/CochaDeforestation_RivRemoved.csv')
+drive_download('MdD_Exports/MdD_BasinDeforestation_RivRemoved.csv', 'out/Basin_Deforestation_RivRemoved.csv')
 
-cochas <- read.csv('out/Cocha_ForestLoss.csv') %>%
-  select(Unique_ID, Type, year, area) %>%
+cochas <- read.csv('out/CochaDeforestation_RivRemoved.csv') %>%
+  gather(ForestToWater, ForestToBarren, key = 'feature', value = 'area') %>%
+  select(Unique_ID, feature, year, area) %>%
   mutate(area.km = area/1000000) %>%
-  group_by(Unique_ID) %>%
+  group_by(feature, Unique_ID) %>%
+  #arrange(year) %>%
   mutate(cumulative = cumsum(area.km)) %>%
   ungroup()
 
-ggplot(cochas %>% filter(Type == 'cocha'), aes(x = year, y = area.km)) + geom_col() + facet_wrap(~Unique_ID) + labs(x = 'year', y = 'Forest loss (sq km)', title = 'Forest loss within 2km of Cocha')
-ggplot(cochas %>% filter(Type == 'cocha'), aes(x = year, y = cumulative)) + geom_col() + facet_wrap(~Unique_ID) + labs(x = 'year', y = 'Cumulative Forest loss (sq km)', title = 'Cumulative Forest loss within 2km of Cocha')
+ggplot(cochas, aes(x = year, y = area.km, fill = feature)) + geom_col() + facet_wrap(~Unique_ID) + labs(x = 'year', y = 'Forest loss (sq km)', title = 'Forest loss within 2km of Cocha')
+ggplot(cochas, aes(x = year, y = cumulative, fill = feature)) + geom_col() + facet_wrap(~Unique_ID) + labs(x = 'year', y = 'Cumulative Forest loss (sq km)', title = 'Cumulative Forest loss within 2km of Cocha')
 
+
+basin <- read.csv('out/Basin_Deforestation_RivRemoved.csv') %>%
+  select(BasinID, year, area, feature) %>%
+  mutate(Basin = ifelse(BasinID == 6080540660, 'UpStreamManuSouth', 
+                        ifelse(BasinID == 6080548660, 'Reserva',
+                               ifelse(BasinID == 6080540560, 'UpstreamManuNorth',
+                                      ifelse(BasinID == 6080549240, 'Manu_Colorado',
+                                             ifelse(BasinID == 6080549470, 'Colorado',
+                                                    ifelse(BasinID == 6080548950, 'Colorado_InamWest',
+                                                           ifelse(BasinID == 6080552360, 'Colorado_InamEast',
+                                                              ifelse(BasinID == 6080552360, 'Colorado_InamEast',
+                                                                     ifelse(BasinID == 6080552520, 'Inambari','Inam_Puerto'))))))))),
+         area.km = area/1000000) %>%
+  group_by(BasinID, Basin, feature) %>%
+  mutate(cumulative = cumsum(area.km)) %>%
+  ungroup()
+
+ggplot(basin, aes(x = year, y = area.km, fill = feature)) + geom_col() + facet_wrap(~Basin) + labs(x = 'year', y = 'Forest loss (sq km)', title = 'Forest loss within the Basin')
+ggplot(basin, aes(x = year, y = cumulative, fill = feature)) + geom_col() + facet_wrap(~Basin) + labs(x = 'year', y = 'Forest loss (sq km)', title = 'Forest loss within the Basin Same year')
+
+
+
+ggplot(basin %>% filter(feature == 'ForestToWater'), aes(x = year, y = area.km)) + geom_col() + facet_wrap(~Basin) + labs(x = 'year', y = 'Forest loss (sq km)', title = 'Forest loss within the Basin')
+ggplot(basin %>% filter(feature == 'ForestToWater'), aes(x = year, y = cumulative)) + geom_col() + facet_wrap(~Basin) + labs(x = 'year', y = 'Forest loss (sq km)', title = 'Forest loss within the Basin Same year')
 
 ```
 
@@ -210,7 +236,15 @@ for(i in files){
   }
 }
 
-locations %>% na.omit() %>% st_as_sf(coords = c('long', 'lat'), crs = 4326) %>% mapview()
+
+caster = locations %>% na.omit() %>% mutate(source = 'caster', Date = NA, Time = NA, Site.Name = NA, Type = NA, Unique_ID = -99) %>% st_as_sf(coords = c('long', 'lat'), crs = 4326)
+ogLocs <- read.csv('in/Cocha_Pond_Cords_Full.csv') %>% st_as_sf(coords = c('Long', 'Lat'), crs = 4326) %>% mutate(source = 'original')
+newLocs <- st_read('in/PondCenterpointsFull.shp') %>% mutate(source = 'relocated') %>% select(-c(Lat, Long)) %>% rename(Site.Name = Site_Name)
+
+locs <- ogLocs %>% rbind(newLocs)  %>% filter(Unique_ID %in% c(5, -99)) %>% mutate(source = factor(source, levels = c('original', 'relocated')))
+mapview(locs, zcol = 'source')
+?mapview
+#%>% rbind(caster)
 
 ```
 
