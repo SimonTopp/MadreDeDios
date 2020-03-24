@@ -1,0 +1,158 @@
+---
+title: "2_HgAnalysis"
+author: "Jackie Gerson"
+date: "3/24/2020"
+output: html_document
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r setup, include=FALSE}
+library(tidyverse)
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+#This file reads in and analyzes mercury data in surface waters for Madre de Dios, Peru.
+
+```{r cars}
+#Read in data files and combine into one dataframe
+oxbow.all<-read.csv("in/Oxbow.lake.data.csv")
+mining.pond.all<-read.csv("in/Mining.pond.data.csv")
+river.all<-read.csv("in/River.data.csv")
+
+river.all.subset<-river.all[,c("Site.number","Site.type","Collection.date","Collection.time","Lat","Long","TSS.mg.L","Ave.THg.sed.ug.g","THg.water.ng.L","MeHg.water.ng.L","Percent.MeHg.water")]
+
+oxbow.mining.all<-rbind(oxbow.all,mining.pond.all)
+water.all<-rbind(oxbow.mining.all,river.all.subset)
+level.order<-c("river.upstream", "oxbow.lake.upstream", "mining.pond","river.downstream","oxbow.lake.downstream")
+
+##FIGURES
+
+#Create boxplots to compare Hg concentrations across surface water types
+library(ggplot2)
+cbp1 <- c("#D55E00","#E69F00","#999999","#0072B2","#56B4E9")
+cbp2 <- c("#56B4E9","#E69F00","#999999","#0072B2","#D55E00")
+
+## Total Hg
+g1<-ggplot(water.all,aes(x=factor(Site.type,level=c("river.upstream", "oxbow.lake.upstream", "mining.pond", "river.downstream", "oxbow.lake.downstream")), y=THg.water.ng.L, fill=Site.type)) + 
+  geom_boxplot()+theme_classic() + 
+  labs(x="",y="\nTHg (ng/L)") + 
+  theme(axis.text.x=element_blank()) + 
+  theme(axis.text.x=element_blank()) + 
+  scale_fill_manual(values=cbp1,labels=c("Oxbow  Downstream","Oxbow  Upstream","Mining Pond","River Downstream","River Upstream")) + 
+  theme(legend.position="top")+labs (fill="")
+
+## MeHg
+g2<-ggplot(water.all,aes(x=factor(Site.type,level=c("river.upstream",  "oxbow.lake.upstream", "mining.pond", "river.downstream", "oxbow.lake.downstream")), y=MeHg.water.ng.L, fill=Site.type)) + 
+  geom_boxplot() + 
+  theme_classic()+
+  labs(x="",y="MeHg (ng/L)")+
+  theme(axis.text.x=element_blank())+
+  theme(axis.text.x=element_blank())+
+  scale_fill_manual(values=cbp1)+
+  theme(legend.position="none")
+
+## Percent MeHg
+g3<-ggplot(water.all,aes(x=factor(Site.type,level=c("river.upstream", "oxbow.lake.upstream", "mining.pond", "river.downstream", "oxbow.lake.downstream")), y=Percent.MeHg.water,fill=Site.type))+
+  geom_boxplot()+
+  theme_classic()+
+  labs(x="",y="Percent Hg\nas MeHg")+
+  scale_fill_manual(values=cbp1)+
+  scale_x_discrete(labels=c("River\nUpstream","Oxbow\nUpstream","Mining\nPond","River\nDownstream","Oxbow\nDownstream"))
+
+## Average Sediment THg
+g4<-ggplot(water.all,aes(x=factor(Site.type,level=c("river.upstream", "oxbow.lake.upstream", "mining.pond", "river.downstream", "oxbow.lake.downstream")), y=Ave.THg.sed.ug.g,fill=Site.type))+
+  geom_boxplot()+
+  theme_classic()+
+  labs(x="",y="Sediment THg\n(ug/g)")+
+  scale_x_discrete(labels=c("River\nUpstream","Oxbow\nUpstream","Mining\nPond","River\nDownstream","Oxbow\nDownstream"))+
+  scale_fill_manual(values=cbp1,labels=c("Oxbow  Downstream","Oxbow  Upstream","Mining Pond","River Downstream","River Upstream"))+
+  theme(legend.position="top")+
+  labs (fill="")
+
+#Create frequency distributions to compare Hg concentrations across surface water types
+water.all.THg<-water.all[order(-water.all$THg.water.ng.L),]
+water.all.THg$ID<-seq.int(nrow(water.all.THg))
+water.all.MeHg<-water.all[order(-water.all$MeHg.water.ng.L),]
+water.all.MeHg$ID<-seq.int(nrow(water.all.MeHg))
+water.all.Percent<-water.all[order(-water.all$Percent.MeHg.water),]
+water.all.Percent$ID<-seq.int(nrow(water.all.Percent))
+water.all.THg.sed<-water.all[order(-water.all$Ave.THg.sed.ug.g),]
+water.all.THg.sed$ID<-seq.int(nrow(water.all.THg.sed))
+
+#Total Hg
+gg1<-ggplot(water.all.THg, aes(x=ID, y=THg.water.ng.L, fill=factor(Site.type, level=c("river.upstream", "oxbow.lake.upstream", "mining.pond", "river.downstream", "oxbow.lake.downstream"))))+
+  geom_bar(stat="identity")+
+  theme_classic()+labs(x="",y="")+
+  theme(axis.text.x=element_blank())+
+  labs (fill="")+
+  scale_fill_manual(values=cbp2)+
+  theme(legend.position="none")
+
+# MeHg
+gg2<-ggplot(water.all.MeHg, aes(x=ID, y=MeHg.water.ng.L,  fill=factor(Site.type,level=c("river.upstream", "oxbow.lake.upstream", "mining.pond", "river.downstream", "oxbow.lake.downstream"))))+
+  geom_bar(stat="identity")+
+  theme_classic()+
+  labs(x="",y="")+
+  theme(axis.text.x=element_blank())+
+  scale_fill_manual(values=cbp2)+
+  theme(legend.position="none")+labs (fill="")
+
+## Percent MeHg
+gg3<-ggplot(water.all.Percent, aes(x=ID, y=Percent.MeHg.water, fill=factor(Site.type,level=c("river.upstream", "oxbow.lake.upstream", "mining.pond", "river.downstream", "oxbow.lake.downstream"))))+
+  geom_bar(stat="identity")+
+  theme_classic()+
+  labs(x="\ncount",y="",fill="")+
+  theme(axis.text.x=element_blank())+
+  scale_fill_manual(values=cbp2)+
+  theme(legend.position="none")
+
+
+gg4<-ggplot(water.all.THg.sed,aes(x=ID,y=Ave.THg.sed.ug.g,fill=factor(Site.type,level=c("river.upstream", "oxbow.lake.upstream", "mining.pond","river.downstream","oxbow.lake.downstream"))))+geom_bar(stat="identity")+theme_classic()+labs(x="\ncount",y="")+theme(axis.text.x=element_blank())+labs (fill="\ncount")+scale_fill_manual (values=cbp2)
+
+#Combine plots into a water column figure and sediment figure
+library(ggpubr)
+#Water column figure
+ggarrange(g1,gg1,g2,gg2,g3,gg3,nrow=3,ncol=2,common.legend=TRUE)
+
+#Sediment figure
+ggarrange(g4,gg4,nrow=1,ncol=2,common.legend=TRUE)
+
+
+##STATISTICS
+
+#Calculate summary statistics for Hg concentrations in water
+library(dplyr)
+water.all %>%  group_by(Site.type) %>% summarize(n=n(),mean_THg = mean(THg.water.ng.L, na.rm = TRUE),sd_THg=sd(THg.water.ng.L, na.rm = TRUE),mean_MeHg=mean(MeHg.water.ng.L,na.rm=TRUE),sd_MeHg=sd(MeHg.water.ng.L, na.rm = TRUE),mean_Percent=mean(Percent.MeHg.water,na.rm=T),sd_Percent=sd(Percent.MeHg.water, na.rm = TRUE))
+
+#Compare THg concentrations in water by surface water type
+library(car)
+shapiro.test(residuals(object =aov(THg.water.ng.L~Site.type,data=water.all)  ))
+#p<0.05-data are not normally distributed
+kruskal.test(THg.water.ng.L ~ Site.type, data = water.all)
+library(FSA)
+dunnTest(THg.water.ng.L ~ Site.type, data = water.all)
+
+#Compare MeHg concentrations in water by surface water type
+shapiro.test(residuals(object =aov(MeHg.water.ng.L~Site.type,data=water.all)  ))
+#p<0.05-data are not normally distributed
+kruskal.test(MeHg.water.ng.L ~ Site.type, data = water.all)
+dunnTest(MeHg.water.ng.L ~ Site.type, data = water.all)
+
+#Compare %MeHg concentrations in water by surface water type
+shapiro.test(residuals(object =aov(Percent.MeHg.water~Site.type,data=water.all)  ))
+#p<0.05-data are not normally distributed
+kruskal.test(Percent.MeHg.water ~ Site.type, data = water.all)
+dunnTest(Percent.MeHg.water ~ Site.type, data = water.all)
+
+#Compare THg concentrations in sediment by surface water type
+shapiro.test(residuals(object =aov(Ave.THg.sed.ug.g~Site.type,data=water.all)  ))
+#p<0.05-data are not normally distributed
+kruskal.test(Ave.THg.sed.ug.g ~ Site.type, data = water.all)
+dunnTest(Ave.THg.sed.ug.g ~ Site.type, data = water.all)
+
+#TSS vs. THg for mining ponds and oxbow lakes
+ggplot(water.all,aes(x=TSS.mg.L,y=THg.water.ng.L,color=Site.type))+geom_point(size=2.5,alpha=.7)+theme_classic()+labs(y="Total Mercury (ng/L)",x="Total Suspended Solids (mg/L)",color="")+scale_color_manual(values=cbp1,labels=c("River Upstream","Oxbow Upstream","Mining Pond","River Downstream","Oxbow Downstream"))
+summary(lm(data=water.all,THg.water.ng.L~TSS.mg.L))
+
+```
