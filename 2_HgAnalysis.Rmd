@@ -22,55 +22,75 @@ river.all<-read.csv("in/River.data.csv")
 
 river.all.subset<-river.all[,c("Site.number","Site.type","Collection.date","Collection.time","Lat","Long","TSS.mg.L","Ave.THg.sed.ug.g","THg.water.ng.L","MeHg.water.ng.L","Percent.MeHg.water")]
 
+## Update the oxbow lake/mining pond coordinates with the centerpoints pulled from EE
+## This is just because some of the sample points were on the edges and for analysis we
+## need centerpoints.
+oxbowCenters <- read.csv('in/LenticCenterPoints.csv')
+
+oxbow.all <- oxbow.all %>% select(-Lat, -Long) %>%
+  left_join(oxbowCenters %>% select(Collection.date = Date, Collection.time = Time, Lat, Long))
+
 oxbow.mining.all<-rbind(oxbow.all,mining.pond.all)
 
 water.all<-rbind(oxbow.mining.all,river.all.subset) %>%
   mutate(Site.type = factor(Site.type, level =c("river.upstream", "oxbow.lake.upstream", "mining.pond", "river.downstream", "oxbow.lake.downstream"),
                             labels = c("River Upstream", "Oxbow Upstream", "Mining Pond", "River Downstream", "Oxbow Downstream")))
+```
 
-##FIGURES
+## Make some figures
 
+```{r cars}
 #Create boxplots to compare Hg concentrations across surface water types
 library(ggplot2)
-cbp1 <- c("#D55E00","#E69F00","#999999","#0072B2","#56B4E9")
-cbp2 <- c("#56B4E9","#E69F00","#999999","#0072B2","#D55E00")
+cb <- c("#56B4E9","#E69F00","#999999","#0072B2","#D55E00")
 
 ## Total Hg
 g1<-ggplot(water.all,aes(x=Site.type, y=THg.water.ng.L, fill=Site.type)) + 
-  geom_boxplot()+theme_classic() + 
+  geom_boxplot()+theme_bw() + 
   labs(x="",y="\nTHg (ng/L)") + 
-  theme(axis.text.x=element_blank()) + 
-  theme(axis.text.x=element_blank()) + 
-  scale_fill_manual(values=cbp1,labels=c("Oxbow  Downstream","Oxbow  Upstream","Mining Pond","River Downstream","River Upstream")) + 
-  theme(legend.position="top")+labs (fill="")
+  theme(axis.text.x=element_blank(),
+        legend.position="top") + 
+  scale_fill_manual(values=cb) + 
+  labs(fill="")
 
 ## MeHg
 g2<-ggplot(water.all,aes(x=Site.type, y=MeHg.water.ng.L, fill=Site.type)) + 
   geom_boxplot() + 
-  theme_classic()+
+  theme_bw()+
   labs(x="",y="MeHg (ng/L)")+
-  theme(axis.text.x=element_blank())+
-  theme(axis.text.x=element_blank())+
-  scale_fill_manual(values=cbp1)+
-  theme(legend.position="none")
+  theme(axis.text.x=element_blank(),
+        legend.position="none") +
+  scale_fill_manual(values=cb)
 
 ## Percent MeHg
 g3<-ggplot(water.all,aes(x=Site.type, y=Percent.MeHg.water,fill=Site.type))+
   geom_boxplot()+
-  theme_classic()+
+  theme_bw()+
+  theme(axis.text.x = element_text(angle = 20, hjust = 1)) +
   labs(x="",y="Percent Hg\nas MeHg")+
-  scale_fill_manual(values=cbp1)+
+  scale_fill_manual(values=cb) +
   scale_x_discrete(labels=c("River\nUpstream","Oxbow\nUpstream","Mining\nPond","River\nDownstream","Oxbow\nDownstream"))
 
 ## Average Sediment THg
-g4<-ggplot(water.all,aes(x=Site.type, y=Ave.THg.sed.ug.g,fill=Site.type))+
+g4 <- ggplot(water.all,aes(x=Site.type, y=Ave.THg.sed.ug.g,fill=Site.type))+
   geom_boxplot()+
-  theme_classic()+
-  labs(x="",y="Sediment THg\n(ug/g)")+
-  #scale_x_discrete(labels=c("River\nUpstream","Oxbow\nUpstream","Mining\nPond","River\nDownstream","Oxbow\nDownstream"))+
-  scale_fill_manual(values=cbp1,labels=c("Oxbow  Downstream","Oxbow  Upstream","Mining Pond","River Downstream","River Upstream"))+
-  theme(legend.position="top")+
-  labs (fill="")
+  theme_bw()+
+  theme(axis.text.x = element_text(angle = 20, hjust = 1)) +
+  labs(x="", y="Sediment THg\n(ug/g)") +
+  scale_x_discrete(labels=c("River\nUpstream","Oxbow\nUpstream","Mining\nPond","River\nDownstream","Oxbow\nDownstream"))+
+  scale_fill_manual(values=cb) +
+  theme(legend.position="top") +
+  labs(fill="")
+
+g5 <- ggplot(water.all,aes(x=Site.type, y=TSS.mg.L, fill=Site.type))+
+  geom_boxplot()+
+  theme_bw()+
+  theme(axis.text.x = element_text(angle = 20, hjust = 1)) +
+  labs(x="", y="Sediment THg\n(ug/g)") +
+  scale_x_discrete(labels=c("River\nUpstream","Oxbow\nUpstream","Mining\nPond","River\nDownstream","Oxbow\nDownstream"))+
+  scale_fill_manual(values=cb) +
+  theme(legend.position="top") +
+  labs(fill="")
 
 #Create frequency distributions to compare Hg concentrations across surface water types
 water.all.THg<-water.all[order(-water.all$THg.water.ng.L),]
@@ -81,51 +101,73 @@ water.all.Percent<-water.all[order(-water.all$Percent.MeHg.water),]
 water.all.Percent$ID<-seq.int(nrow(water.all.Percent))
 water.all.THg.sed<-water.all[order(-water.all$Ave.THg.sed.ug.g),]
 water.all.THg.sed$ID<-seq.int(nrow(water.all.THg.sed))
+water.all.THg.TSS<-water.all[order(-water.all$TSS.mg.L),]
+water.all.THg.TSS$ID<-seq.int(nrow(water.all.THg.TSS))
 
 #Total Hg
 gg1<-ggplot(water.all.THg, aes(x=ID, y=THg.water.ng.L, fill=Site.type))+
   geom_bar(stat="identity")+
-  theme_classic()+labs(x="",y="")+
-  theme(axis.text.x=element_blank())+
-  labs (fill="")+
-  scale_fill_manual(values=cbp2)+
-  theme(legend.position="none")
+  theme_bw()+labs(x="",y="")+
+  theme(axis.text.x=element_blank(),
+        legend.position="none")+
+  labs(fill="")+
+  scale_fill_manual(values=cb)
 
 # MeHg
 gg2<-ggplot(water.all.MeHg, aes(x=ID, y=MeHg.water.ng.L,  fill=Site.type))+
   geom_bar(stat="identity")+
-  theme_classic()+
+  theme_bw()+
   labs(x="",y="")+
-  theme(axis.text.x=element_blank())+
-  scale_fill_manual(values=cbp2)+
-  theme(legend.position="none")+labs (fill="")
+  theme(axis.text.x=element_blank(),
+        legend.position="none")+
+  scale_fill_manual(values=cb)+
+  labs(fill="")
 
 ## Percent MeHg
 gg3<-ggplot(water.all.Percent, aes(x=ID, y=Percent.MeHg.water, fill=Site.type))+
   geom_bar(stat="identity")+
-  theme_classic()+
+  theme_bw()+
   labs(x="\ncount",y="",fill="")+
-  theme(axis.text.x=element_blank())+
-  scale_fill_manual(values=cbp2)+
-  theme(legend.position="none")
+  theme(axis.text.x=element_blank(),
+        legend.position="none")+
+  scale_fill_manual(values=cb)
 
 ## Sediment THg
 gg4<-ggplot(water.all.THg.sed, aes(x=ID,y=Ave.THg.sed.ug.g,fill=Site.type))+
   geom_bar(stat="identity")+
-  theme_classic()+
+  theme_bw()+
   labs(x="\ncount",y="")+
   theme(axis.text.x=element_blank())+
-  labs (fill="\ncount")+scale_fill_manual (values=cbp2)
+  labs (fill="\ncount")+scale_fill_manual (values=cb)
+
+## Sediment THg
+gg5<-ggplot(water.all.THg.TSS, aes(x=ID,y=TSS.mg.L,fill=Site.type))+
+  geom_bar(stat="identity")+
+  theme_bw()+
+  labs(x="\ncount",y="")+
+  theme(axis.text.x=element_blank())+
+  labs (fill="\ncount")+scale_fill_manual(values=cb)
+
 
 #Combine plots into a water column figure and sediment figure
 
 #Water column figure
-ggpubr::ggarrange(g1,gg1,g2,gg2,g3,gg3,nrow=3,ncol=2,common.legend=TRUE)
+g <- ggpubr::ggarrange(g1,gg1,g2,gg2,g3,gg3,nrow=3,ncol=2,common.legend=TRUE)
+
+ggsave('figures/HgAnalysis.png', plot = g, width = 7, units = 'in')
 
 #Sediment figure
 ggpubr::ggarrange(g4,gg4,nrow=1,ncol=2,common.legend=TRUE)
+ggsave('figures/HgSed.png', width = 7, height = 3.5, units = 'in')
+
+##TSS Figure
+ggpubr::ggarrange(g5,gg5,nrow=1,ncol=2,common.legend=TRUE)
+ggsave('figures/HgTSS.png', width = 7, height = 3.5, units = 'in')
+##Water.all and tss mg/L column same as gg4 but with TSS
+```
 
 
+```{r cars}
 ## Take a look at distributions and run some statistics
 
 #Calculate summary statistics for Hg concentrations in water
@@ -166,116 +208,16 @@ kruskal.test(Ave.THg.sed.ug.g ~ Site.type, data = water.all)
 FSA::dunnTest(Ave.THg.sed.ug.g ~ Site.type, data = water.all)
 
 #TSS vs. THg for mining ponds and oxbow lakes
-ggplot(water.all,aes(x=TSS.mg.L,y=THg.water.ng.L,color=Site.type))+geom_point(size=2.5,alpha=.7)+theme_classic()+labs(y="Total Mercury (ng/L)",x="Total Suspended Solids (mg/L)",color="")+scale_color_manual(values=cbp1,labels=c("River Upstream","Oxbow Upstream","Mining Pond","River Downstream","Oxbow Downstream"))
+ggplot(water.all,aes(x=TSS.mg.L,y=THg.water.ng.L,color=Site.type))+
+  geom_point(size=2.5,alpha=.7)+
+  theme_bw()+
+  labs(y="Total Mercury (ng/L)",x="Total Suspended Solids (mg/L)",color="")+
+  scale_color_manual(values=cb)
+ggsave('figures/TSSvTHg.png', width = 5, height = 3, units = 'in')
 
 ## Look at R2 and regression results
 summary(lm(data=water.all,THg.water.ng.L~TSS.mg.L))
 
 ```
 
-## Simon's version of the figures
-
-
-```{r}
-#Create boxplots to compare Hg concentrations across surface water types
-library(ggplot2)
-cbp1 <- viridis::plasma(5, end = .8)
-cbp1 <- c("#D55E00","#E69F00","#999999","#0072B2","#56B4E9")
-cbp1 <- c("#56B4E9","#E69F00","#999999","#0072B2","#D55E00")
-
-## Total Hg
-g1<-ggplot(water.all,aes(x=Site.type, y=THg.water.ng.L, fill=Site.type)) + 
-  geom_boxplot()+theme_bw() + 
-  labs(x="",y="\nTHg (ng/L)") + 
-  theme(axis.text.x=element_blank(),
-        legend.position="top") + 
-  scale_fill_manual(values=cbp1) + 
-  labs(fill="")
-
-## MeHg
-g2<-ggplot(water.all,aes(x=Site.type, y=MeHg.water.ng.L, fill=Site.type)) + 
-  geom_boxplot() + 
-  theme_bw()+
-  labs(x="",y="MeHg (ng/L)")+
-  theme(axis.text.x=element_blank(),
-        legend.position="none") +
-  scale_fill_manual(values=cbp1)
-
-## Percent MeHg
-g3<-ggplot(water.all,aes(x=Site.type, y=Percent.MeHg.water,fill=Site.type))+
-  geom_boxplot()+
-  theme_bw()+
-  #theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
-  labs(x="",y="Percent Hg\nas MeHg")+
-  scale_fill_manual(values=cbp1) +
-  scale_x_discrete(labels=c("River\nUpstream","Oxbow\nUpstream","Mining\nPond","River\nDownstream","Oxbow\nDownstream"))
-
-## Average Sediment THg
-g4 <- ggplot(water.all,aes(x=Site.type, y=Ave.THg.sed.ug.g,fill=Site.type))+
-  geom_boxplot()+
-  theme_bw()+
-  labs(x="", y="Sediment THg\n(ug/g)") +
-  #scale_x_discrete(labels=c("River\nUpstream","Oxbow\nUpstream","Mining\nPond","River\nDownstream","Oxbow\nDownstream"))+
-  scale_fill_manual(values=cbp1) +
-  theme(legend.position="top") +
-  labs(fill="")
-
-#Create frequency distributions to compare Hg concentrations across surface water types
-water.all.THg<-water.all[order(-water.all$THg.water.ng.L),]
-water.all.THg$ID<-seq.int(nrow(water.all.THg))
-water.all.MeHg<-water.all[order(-water.all$MeHg.water.ng.L),]
-water.all.MeHg$ID<-seq.int(nrow(water.all.MeHg))
-water.all.Percent<-water.all[order(-water.all$Percent.MeHg.water),]
-water.all.Percent$ID<-seq.int(nrow(water.all.Percent))
-water.all.THg.sed<-water.all[order(-water.all$Ave.THg.sed.ug.g),]
-water.all.THg.sed$ID<-seq.int(nrow(water.all.THg.sed))
-
-#Total Hg
-gg1<-ggplot(water.all.THg, aes(x=ID, y=THg.water.ng.L, fill=Site.type))+
-  geom_bar(stat="identity")+
-  theme_bw()+labs(x="",y="")+
-  theme(axis.text.x=element_blank(),
-        legend.position="none")+
-  labs(fill="")+
-  scale_fill_manual(values=cbp1)
-
-# MeHg
-gg2<-ggplot(water.all.MeHg, aes(x=ID, y=MeHg.water.ng.L,  fill=Site.type))+
-  geom_bar(stat="identity")+
-  theme_bw()+
-  labs(x="",y="")+
-  theme(axis.text.x=element_blank(),
-        legend.position="none")+
-  scale_fill_manual(values=cbp1)+
-  labs(fill="")
-
-## Percent MeHg
-gg3<-ggplot(water.all.Percent, aes(x=ID, y=Percent.MeHg.water, fill=Site.type))+
-  geom_bar(stat="identity")+
-  theme_bw()+
-  labs(x="\ncount",y="",fill="")+
-  theme(axis.text.x=element_blank(),
-        legend.position="none")+
-  scale_fill_manual(values=cbp1)
-
-## Sediment THg
-gg4<-ggplot(water.all.THg.sed, aes(x=ID,y=Ave.THg.sed.ug.g,fill=Site.type))+
-  geom_bar(stat="identity")+
-  theme_bw()+
-  labs(x="\ncount",y="")+
-  theme(axis.text.x=element_blank())+
-  labs (fill="\ncount")+scale_fill_manual (values=cbp1)
-
-#Combine plots into a water column figure and sediment figure
-
-#Water column figure
-g <- ggpubr::ggarrange(g1,gg1,g2,gg2,g3,gg3,nrow=3,ncol=2,common.legend=TRUE)
-ggsave('figures/HgAnalysis.png', plot = g, height = 8, width = 7, units = 'in')
-
-#Sediment figure
-ggpubr::ggarrange(g4,gg4,nrow=1,ncol=2,common.legend=TRUE)
-
-
-##Water.all and tss mg/L column same as gg4 but with TSS
-```
 

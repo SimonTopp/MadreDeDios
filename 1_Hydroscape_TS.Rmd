@@ -20,13 +20,16 @@ knitr::opts_chunk$set(echo = TRUE)
 
 ```{r}
 ##Download output file from Google Earth Engine
-drive_download('MdD_Exports/MdD_Hydroscape_TS_DL_Riv_Global.csv', 'out/MdD_Hydroscape_TS_DL_Riv_Global.csv', overwrite = T)
+#drive_download('MdD_Exports/MdD_Hydroscape_TS_DL_Riv_Global.csv', 'out/MdD_Hydroscape_TS_DL_Riv_Global.csv', overwrite = T)
 
 ##Visualize the watersheds we're looking at
 #Level 8 Hydrosheds can be downloaded from https://www.hydrosheds.org/downloads
-basins.sf <- st_read('D:/GIS_Data/HydroSheds/hybas_sa_lev08_v1c.shp') %>%
-  filter(HYBAS_ID %in% c(6080540660, 6080548660,6080549240,6080549470,6080548950,6080552360,6080552360,6080552520, 6080546500))#,6080540560
+#basins.sf <- st_read('D:/GIS_Data/HydroSheds/hybas_sa_lev08_v1c.shp') %>%
+# filter(HYBAS_ID %in% c(6080540660, 6080548660,6080549240,6080549470,6080548950,6080552360,6080552360,6080552520, 6080546500))#,6080540560
 
+## Make smaller version to host within the repository
+#st_write(basins.sf, 'in/MdD_Basins.shp' )
+basins.sf <- st_read('in/MdD_Basins.shp')
 mapView(basins.sf)
 
 ## Temp, save locally
@@ -100,7 +103,7 @@ hsPeru %>%
 
 ```{r}
 ## Download the output from Google Earth Engine
-drive_download('MdD_Exports/MdD_BasinDeforestation_RivRemoved.csv', 'out/Basin_Deforestation_RivRemoved.csv')
+#drive_download('MdD_Exports/MdD_BasinDeforestation_RivRemoved.csv', 'out/Basin_Deforestation_RivRemoved.csv')
 
 ## Clean up the dataset a little bit.
 basin <- read.csv('out/Basin_Deforestation_RivRemoved.csv') %>%
@@ -163,7 +166,7 @@ Prop$sum[Prop$feature == 'ForestToWater']/Prop$sum[Prop$feature == 'ForestToBarr
 
 ```{r}
 ##Download output file from Google Earth Engine
-drive_download('MdD_Exports/MdD_Hydroscape_TS_Global_100m.csv', 'out/MdD_Hydroscape_TS_Global_100m.csv', overwrite = T)
+#drive_download('MdD_Exports/MdD_Hydroscape_TS_Global_100m.csv', 'out/MdD_Hydroscape_TS_Global_100m.csv', overwrite = T)
 
 ## Clean up the Hydroscape timeseries a little bit.  
 hsGlob <- read_csv('out/MdD_Hydroscape_TS_Global_100m.csv') %>%
@@ -215,19 +218,18 @@ hsGlob %>% mutate(area = Basin,
   scale_y_continuous(labels = scales::percent) +
   facet_wrap(~area, nrow = 4) +
   theme_bw() +
-  labs(x = 'Year', y = 'Area (% of mean)', color = 'Type', title = 'Change in lentic surface water extent') +
-  theme(legend.position = 'bottom',
-        legend.)
+  labs(x = 'Year', y = 'Area (% of mean)', color = 'Basin', title = 'Change in lentic surface water extent') +
+  theme(legend.position = 'bottom')
 
 ggsave('figures/LenLotGlobalv2.pdf', width = 2.25, height = 7, units = 'in')
-## Now make the associated pngs with the waterstacks
-#colombiaStack <- raster::raster('out/WaterStack_Colombia.tif')
-ghanaStack <- raster::raster('out/WaterStack_Ghana.tif')
-indonesiaStack <- raster::raster('out/WaterStack_Indonesia.tif')
-peruStack <- raster::raster('out/WaterStack_Peru.tif')
-#GuyanaStack <- raster::raster('out/GuyanaStack.tif')
-VenezuelaStack <- raster::raster('out/VenezuelaStack.tif')
-peruStack_120 <- raster::raster('out/PeruStack_120.tif')
+
+
+## Now make the associated pngs with the waterstacks pulled from GEE
+
+ghanaStack <- raster::raster('out/tif_Exports/WaterStack_Ghana.tif')
+indonesiaStack <- raster::raster('out/tif_Exports/WaterStack_Indonesia.tif')
+VenezuelaStack <- raster::raster('out/tif_Exports/VenezuelaStack.tif')
+peruStack <- raster::raster('out/tif_Exports/PeruStack_120.tif')
 
 rasterVis::gplot(ghanaStack, maxpixels = 5e5) + 
   geom_raster(aes(fill = value), interpolate = T) +
@@ -269,7 +271,7 @@ ggsave('figures/VenezuelaStack.png', height = 4, units = 'in')
 ## Put everything together in Illustrator because the rasters are tough to do programatically.
 ```
 
-## Now make some figures.
+## Finally, put together everything for Figure 1
 
 ```{r}
 ## Make basins
@@ -284,20 +286,18 @@ basins.sf <- st_read('in/MdD_Basins.shp') %>% filter(!HYBAS_ID == 6080540560) %>
                                     ifelse(HYBAS_ID == 6080546500, 'In.- Puerto', NA)))))))),
          Mined = ifelse(Basin %in% c('Inambari', 'Colorado'), T,F))
 
-ggplot(basins.sf) + geom_sf(aes(color = Mined), fill = 'transparent')
-
-bounds <- tibble(lon = c(-71.4878, -69.120307), lat = c(-13.1649, -12.2164))
-bb <- make_bbox(lon, lat, data = bounds)
-calc_zoom(bb)
 
 ## Programatically make figure 1
 library(ggmap)
+## Bring in google basemap imagery
 sq_map <- get_map(location = c(lon = -70.3733, lat = -12.6302), zoom = 8, source ='google', maptype = "satellite")
 
-stack <-  RStoolbox::ggR(peruStack_120, ggObj = FALSE) %>%
+## Convert the Peru Raster to a dataframe
+stack <-  RStoolbox::ggR(peruStack, ggObj = FALSE) %>%
   #na.omit() %>%
   rename(lon = x, lat = y)
 
+## Create map with basins, the peruStack, and imagery
 ggmap::ggmap(sq_map, darken = c(0.1, "white")) + 
   geom_raster(data = stack, aes(x = lon, y = lat, fill = value), interpolate = T) +
   geom_sf(data = basins.sf %>% st_transform(crs = 4326), aes(color = Mined), inherit.aes = F, fill = 'transparent') + 
@@ -311,22 +311,8 @@ ggmap::ggmap(sq_map, darken = c(0.1, "white")) +
 ggsave('perStack.png', width = 6.5, units = 'in')
 
 
-ggplot() +
-  geom_raster(data = stack, aes(x = lon, y = lat, fill = value), interpolate = T) +
-  coord_cartesian() +
-  coord_sf(crs = 4326, xlim = c(-71.381, -69.2331), ylim = c(-13.1649, -12.2164)) +
-  scale_fill_viridis_c('Year', option = 'plasma', direction = -1, na.value="transparent") + 
-  theme_void() + 
-  theme(legend.position = 'bottom')
-
-ggsave('peruStack.png', width = 6.5, units = 'in')
-
-#c('#b9baa3', '#a22c29')
-
-
-
+# Generate the inset map
 peruLine <- rnaturalearth::ne_countries(scale = 'medium', country = 'Peru') %>% st_as_sf()
-
 ggplot(peruLine) + geom_sf() + theme_void()
 ggsave('PeruOutline.eps', width = 1, units = 'in')
 ```
