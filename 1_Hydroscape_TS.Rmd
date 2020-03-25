@@ -25,9 +25,12 @@ drive_download('MdD_Exports/MdD_Hydroscape_TS_DL_Riv_Global.csv', 'out/MdD_Hydro
 ##Visualize the watersheds we're looking at
 #Level 8 Hydrosheds can be downloaded from https://www.hydrosheds.org/downloads
 basins.sf <- st_read('D:/GIS_Data/HydroSheds/hybas_sa_lev08_v1c.shp') %>%
-  filter(HYBAS_ID %in% c(6080540660, 6080548660,6080540560,6080549240,6080549470,6080548950,6080552360,6080552360,6080552520, 6080546500))
+  filter(HYBAS_ID %in% c(6080540660, 6080548660,6080549240,6080549470,6080548950,6080552360,6080552360,6080552520, 6080546500))#,6080540560
 
 mapView(basins.sf)
+
+## Temp, save locally
+#st_write(basins.sf, 'in/MdD_Basins.shp' )
 
 ## Clean up the Hydroscape timeseries a little bit.  
 hsPeru <- read_csv('out/MdD_Hydroscape_TS_DL_Riv_Global.csv') %>% 
@@ -36,14 +39,14 @@ hsPeru <- read_csv('out/MdD_Hydroscape_TS_DL_Riv_Global.csv') %>%
   mutate(nonRivArea = waterArea - rivArea) %>%
   gather('feature', 'area', cl, rivArea, waterArea, nonRivArea) %>%
   mutate(Basin = ifelse(BasinID == 6080540660, 'Upstream Manu', 
-                    ifelse(BasinID == 6080548660, 'Reserve',
+                    ifelse(BasinID == 6080548660, 'Conservacion Area',
                      #ifelse(BasinID == 6080540560, 'UpstreamManuNorth',
                       ifelse(BasinID == 6080549240, 'Manu - Co.',
                         ifelse(BasinID == 6080549470, 'Colorado',
                          ifelse(BasinID == 6080548950, 'Co.- In. West',
                             ifelse(BasinID == 6080552360, 'Co.- In. East',
                               ifelse(BasinID == 6080552520, 'Inambari',
-                                ifelse(BasinID == 6080546500, 'In.- Puerto', NA) ))))))),
+                                ifelse(BasinID == 6080546500, 'In.- Puerto', NA)))))))),
          area.km = area/1000000) %>%
   filter(!is.na(Basin)) %>%
   group_by(BasinID, Basin, feature) %>%
@@ -53,7 +56,8 @@ hsPeru <- read_csv('out/MdD_Hydroscape_TS_DL_Riv_Global.csv') %>%
 
 ##Figure 1B:  Lotic vs Lentic change over time
 hsPeru %>% filter(!feature %in% c('cl', 'waterArea')) %>%
-  mutate(feature = factor(feature, levels = c('rivArea', 'nonRivArea'), labels = c('Lotic', 'Lentic'))) %>%
+  mutate(feature = factor(feature, levels = c('rivArea', 'nonRivArea'), labels = c('Lotic', 'Lentic')),
+         Basin = factor(Basin, levels = c('Upstream Manu', 'Manu - Co.', 'Colorado', 'Co.- In. West',  'Conservacion Area', 'Co.- In. East', 'Inambari', 'In.- Puerto'))) %>%
   ggplot(., aes(x = year, y = area.percent, color = feature)) + 
   geom_point(alpha = .4) + 
   geom_smooth(se = F, span = .2) + 
@@ -155,17 +159,14 @@ Prop <- basin %>% filter(year == 2018) %>%
 Prop$sum[Prop$feature == 'ForestToWater']/Prop$sum[Prop$feature == 'ForestToBarren']
 ```
 
-
 ## Now take a look at some other rivers impacted by ASGM
 
 ```{r}
 ##Download output file from Google Earth Engine
 drive_download('MdD_Exports/MdD_Hydroscape_TS_Global_100m.csv', 'out/MdD_Hydroscape_TS_Global_100m.csv', overwrite = T)
-drive_download('MdD_Exports/MdD_Hydroscape_TS_DL_Riv_Guyana.csv', 'out/MMdD_Hydroscape_TS_DL_Riv_Guyana.csv', overwrite = T)
 
 ## Clean up the Hydroscape timeseries a little bit.  
-hsGlob <- read_csv('out/MdD_Hydroscape_TS_Global_100m.csv') %>% 
-  bind_rows(read_csv('out/MMdD_Hydroscape_TS_DL_Riv_Guyana.csv')) %>%
+hsGlob <- read_csv('out/MdD_Hydroscape_TS_Global_100m.csv') %>%
   select(-`system:index`, - .geo) %>%
   spread(feature, area) %>%
   mutate(nonRivArea = waterArea - rivArea) %>%
@@ -173,80 +174,60 @@ hsGlob <- read_csv('out/MdD_Hydroscape_TS_Global_100m.csv') %>%
   mutate(Basin = ifelse(BasinID == 1080977020, 'Offin River, Ghana', 
                     ifelse(BasinID == 6080108730, 'Rio Quito, Colombia',
                      ifelse(BasinID == 5080162350, 'Kahayan River, Indonesia',
-                      ifelse(BasinID == 6080099320, 'Venezuela', 
-                             ifelse(BasinID == 6080113570,'Guyana', NA))))),
+                      ifelse(BasinID == 6080099320, 'Cuyuni River, Venezuela', NA)))),
          area.km = area/1000000) %>%
   group_by(BasinID, Basin, feature) %>%
   mutate(area.percent = scale(area,center = F, scale = mean(area)),
          diff = c(NA, diff(area.percent))) %>%
-  ungroup() 
+  ungroup()  %>% filter(!BasinID == 6080108730)
 
-ggplot(hsGlob %>% filter(!feature %in% c('cl', 'waterArea')), aes(x = year, y = area.percent, color = feature)) + 
+## Figure 3 left panels
+hsGlob %>% filter(!feature %in% c('cl', 'waterArea'))%>% 
+  mutate(feature = factor(feature, levels = c('rivArea', 'nonRivArea'), labels = c('Lotic', 'Lentic'))) %>%
+  ggplot(., aes(x = year, y = area.percent, color = feature)) + 
   geom_point(alpha = .4) + 
   geom_smooth(se = F, span = .2) + 
-  scale_color_viridis_d(end = .6, labels = c('Lentic', 'Lotic')) +
+  scale_color_viridis_d(end = .6, direction = -1) +
   scale_y_continuous(labels = scales::percent) +
   facet_wrap(~Basin, nrow = 4) +
   theme_bw() +
   labs(x = 'Year', y = 'Area (% of mean)', color = 'Type', title = 'Change in Surface water extent') +
   theme(legend.position = 'bottom')
-```
 
+ggsave('figures/LenLotGlobal.pdf', width = 2.25, height = 7, units = 'in')
 
-## Now make some figures.
+##Version 2 of Figure 3 left panels
 
-
-```{r}
-## Try to make a legend stand alone legend
-
-dummy = tibble(Year = seq(1985,2018,1), pnts = 1)
-
-p <- ggplot(dummy, aes(x = Year, y = pnts, color = Year)) + geom_point() +
-  scale_color_viridis_c(begin = .3) +
+hsGlob %>% mutate(area = Basin,
+                  Basin = 'Study River') %>%
+  bind_rows(hsPeru %>% filter(Basin %in% c('Colorado', 'Inambari')) %>% 
+              mutate(area = 'Offin River, Ghana')) %>%
+      bind_rows(hsPeru %>% filter(Basin %in% c('Colorado', 'Inambari')) %>% 
+              mutate(area = 'Kahayan River, Indonesia')) %>%
+      bind_rows(hsPeru %>% filter(Basin %in% c('Colorado', 'Inambari')) %>% 
+            mutate(area = 'Cuyuni River, Venezuela')) %>%
+  filter(feature == 'nonRivArea')%>% 
+  mutate(feature = 'Lentic') %>%
+  ggplot(., aes(x = year, y = area.percent, color = Basin)) + 
+  geom_point(alpha = .4) + 
+  geom_smooth(se = F, span = .2) + 
+  scale_color_viridis_d(end = .6, direction = -1) +
+  scale_y_continuous(labels = scales::percent) +
+  facet_wrap(~area, nrow = 4) +
+  theme_bw() +
+  labs(x = 'Year', y = 'Area (% of mean)', color = 'Type', title = 'Change in lentic surface water extent') +
   theme(legend.position = 'bottom',
-        legend.title.align = 0,
-        legend.title = element_text(vjust = .75))
-p
-ggsave('out/dummyLegend.pdf')
+        legend.)
 
-cowplot::get_legend(p)
-
-##Messing around with visualizing exported GeoTiff
-colombiaStack <- raster::raster('out/WaterStack_Colombia.tif')
+ggsave('figures/LenLotGlobalv2.pdf', width = 2.25, height = 7, units = 'in')
+## Now make the associated pngs with the waterstacks
+#colombiaStack <- raster::raster('out/WaterStack_Colombia.tif')
 ghanaStack <- raster::raster('out/WaterStack_Ghana.tif')
 indonesiaStack <- raster::raster('out/WaterStack_Indonesia.tif')
 peruStack <- raster::raster('out/WaterStack_Peru.tif')
-GuyanaStack <- raster::raster('out/GuyanaStack.tif')
+#GuyanaStack <- raster::raster('out/GuyanaStack.tif')
 VenezuelaStack <- raster::raster('out/VenezuelaStack.tif')
-##Make Subset for Other countries:
-hsGlob = hsFull %>% filter(BasinID %in% c(6080108730, 1080977020, 5080162350, 6080099320))
-
-ggplot(hsGlob %>% filter(!feature %in% c('cl', 'waterArea')), aes(x = year, y = area.percent, color = feature)) + 
-  geom_point(alpha = .4) + 
-  geom_smooth(se = F, span = .2) + 
-  scale_color_viridis_d(end = .6, labels = c('Lentic', 'Lotic')) +
-  scale_y_continuous(labels = scales::percent) +
-  facet_wrap(~Basin, nrow = 3) +
-  theme_bw() +
-  labs(x = 'Year', y = 'Area (% of mean)', color = 'Type', title = 'Change in Surface water extent') +
-  theme(legend.position = 'bottom')
-
-ggsave('figures/LenLotGlobal.pdf', width = 2.5, height = 7, units = 'in')
-
-library(rasterVis)
-
-rasterVis::gplot(colombiaStack, maxpixels = 5e5) + 
-  geom_raster(aes(fill = value), interpolate = T) +
-  scale_fill_viridis_c('Year', na.value = 'black', begin = .3) +
-  coord_equal() +
-  theme_void() +
-  ylim(c(5.3, 5.6)) +
-  xlim(c(-76.8, -76.6)) +
-  labs(x = 'Longitude', y = 'Latitude') + 
-  theme(legend.position = 'none',
-        axis.title.x = element_blank())
-
-ggsave('figures/ColombiaStack.png', height = 1.85, width = 2, units = 'in')
+peruStack_120 <- raster::raster('out/PeruStack_120.tif')
 
 rasterVis::gplot(ghanaStack, maxpixels = 5e5) + 
   geom_raster(aes(fill = value), interpolate = T) +
@@ -258,7 +239,8 @@ rasterVis::gplot(ghanaStack, maxpixels = 5e5) +
   labs(x = 'Longitude', y = 'Latitude') + 
   theme(legend.position = 'none',
         axis.title.x = element_blank())
-ggsave('figures/ghanaStack.png', height = 1.85, width = 2, units = 'in')
+
+ggsave('figures/ghanaStack.png', height = 4, units = 'in')
 
 rasterVis::gplot(indonesiaStack, maxpixels = 5e5) + 
   geom_raster(aes(fill = value), interpolate = T) +
@@ -270,7 +252,7 @@ rasterVis::gplot(indonesiaStack, maxpixels = 5e5) +
   labs(x = 'Longitude', y = '') + 
   theme(legend.position = 'none')
 
-ggsave('figures/indonesiaStack.png', height = 1.85, width = 2, units = 'in')
+ggsave('figures/indonesiaStack.png', height = 4, units = 'in')
 
 rasterVis::gplot(VenezuelaStack, maxpixels = 5e5) + 
   geom_raster(aes(fill = value), interpolate = T) +
@@ -282,25 +264,71 @@ rasterVis::gplot(VenezuelaStack, maxpixels = 5e5) +
   labs(x = 'Longitude', y = '') + 
   theme(legend.position = 'none')
 
-ggsave('figures/VenezulaStack.png', height = 4, units = 'in')
+ggsave('figures/VenezuelaStack.png', height = 4, units = 'in')
 
+## Put everything together in Illustrator because the rasters are tough to do programatically.
+```
 
+## Now make some figures.
+
+```{r}
+## Make basins
+basins.sf <- st_read('in/MdD_Basins.shp') %>% filter(!HYBAS_ID == 6080540560) %>%
+  mutate(Basin = ifelse(HYBAS_ID == 6080540660, 'Upstream Manu', 
+                        ifelse(HYBAS_ID == 6080548660, 'Conservation Area',
+                          ifelse(HYBAS_ID == 6080549240, 'Manu - Co.',
+                            ifelse(HYBAS_ID == 6080549470, 'Colorado',
+                             ifelse(HYBAS_ID == 6080548950, 'Co.- In. West',
+                                ifelse(HYBAS_ID == 6080552360, 'Co.- In. East',
+                                  ifelse(HYBAS_ID == 6080552520, 'Inambari',
+                                    ifelse(HYBAS_ID == 6080546500, 'In.- Puerto', NA)))))))),
+         Mined = ifelse(Basin %in% c('Inambari', 'Colorado'), T,F))
+
+ggplot(basins.sf) + geom_sf(aes(color = Mined), fill = 'transparent')
 
 bounds <- tibble(lon = c(-71.4878, -69.120307), lat = c(-13.1649, -12.2164))
 bb <- make_bbox(lon, lat, data = bounds)
 calc_zoom(bb)
 
 ## Programatically make figure 1
-sq_map <- ggmap::get_map(location = c(lon = -70.3733, lat = -12.6302), zoom = 9, source = 'google', maptype = "satellite")
+library(ggmap)
+sq_map <- get_map(location = c(lon = -70.3733, lat = -12.6302), zoom = 8, source ='google', maptype = "satellite")
 
-stack <-  ggR(peruStack %>% raster::aggregate(., fact = 2), ggObj = FALSE) %>%
-  na.omit() %>%
+stack <-  RStoolbox::ggR(peruStack_120, ggObj = FALSE) %>%
+  #na.omit() %>%
   rename(lon = x, lat = y)
 
-ggmap(sq_map) + geom_tile(data = stack, aes(x = lon, y = lat, fill = value)) +
-  geom_sf(data = basins.sf %>% st_transform(crs = 4326), inherit.aes = F, fill = 'transparent') + 
-  #scale_color_manual('Basins', values = c('blue', 'red'), breaks = c(1,2)) +
-  scale_fill_viridis_c('Year', begin = .3)
+ggmap::ggmap(sq_map, darken = c(0.1, "white")) + 
+  geom_raster(data = stack, aes(x = lon, y = lat, fill = value), interpolate = T) +
+  geom_sf(data = basins.sf %>% st_transform(crs = 4326), aes(color = Mined), inherit.aes = F, fill = 'transparent') + 
+  coord_cartesian() +
+  coord_sf(crs = 4326, xlim = c(-71.381, -69.2331), ylim = c(-13.1649, -12.2164)) +
+  scale_color_manual('Mining Activity', values = c('#2da8d8ff', '#d9514eff'), labels = c('Minor', 'Heavy')) +
+  scale_fill_viridis_c('Year', option = 'plasma', direction = -1, na.value="transparent") + 
+  theme_void() +
+  theme(legend.position = 'none')
+
+ggsave('perStack.png', width = 6.5, units = 'in')
+
+
+ggplot() +
+  geom_raster(data = stack, aes(x = lon, y = lat, fill = value), interpolate = T) +
+  coord_cartesian() +
+  coord_sf(crs = 4326, xlim = c(-71.381, -69.2331), ylim = c(-13.1649, -12.2164)) +
+  scale_fill_viridis_c('Year', option = 'plasma', direction = -1, na.value="transparent") + 
+  theme_void() + 
+  theme(legend.position = 'bottom')
+
+ggsave('peruStack.png', width = 6.5, units = 'in')
+
+#c('#b9baa3', '#a22c29')
+
+
+
+peruLine <- rnaturalearth::ne_countries(scale = 'medium', country = 'Peru') %>% st_as_sf()
+
+ggplot(peruLine) + geom_sf() + theme_void()
+ggsave('PeruOutline.eps', width = 1, units = 'in')
 ```
 
 
