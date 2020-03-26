@@ -86,7 +86,7 @@ g5 <- ggplot(water.all,aes(x=Site.type, y=TSS.mg.L, fill=Site.type))+
   geom_boxplot()+
   theme_bw()+
   theme(axis.text.x = element_text(angle = 20, hjust = 1)) +
-  labs(x="", y="Sediment THg\n(ug/g)") +
+  labs(x="", y="TSS (mg/L)") +
   scale_x_discrete(labels=c("River\nUpstream","Oxbow\nUpstream","Mining\nPond","River\nDownstream","Oxbow\nDownstream"))+
   scale_fill_manual(values=cb) +
   theme(legend.position="top") +
@@ -213,6 +213,7 @@ ggplot(water.all,aes(x=TSS.mg.L,y=THg.water.ng.L,color=Site.type))+
   theme_bw()+
   labs(y="Total Mercury (ng/L)",x="Total Suspended Solids (mg/L)",color="")+
   scale_color_manual(values=cb)
+
 ggsave('figures/TSSvTHg.png', width = 5, height = 3, units = 'in')
 
 ## Look at R2 and regression results
