@@ -76,20 +76,35 @@ ggsave('figures/LenLot.pdf', width = 6.5, height = 3, units = 'in')
 
 ## Loook at overall differences in Lotic and Lentic areas for the beginning
 ## vs end periods of the study.
-hsPeru %>% mutate(period = ifelse(year < 1990, 'start', ifelse(year > 2013, 'end', NA))) %>%
+periodDif <- hsPeru %>% mutate(period = ifelse(year < 1990, 'start', ifelse(year > 2013, 'end', NA))) %>%
   filter(!is.na(period),
-          feature == 'rivArea') %>% #'nonRivArea'
+          !feature %in% c('cl', 'waterArea')) %>% #'nonRivArea', 'rivArea'
   select(Basin, period, feature, area.km) %>%
   group_by(Basin, period, feature) %>%
   summarise(area.km = mean(area.km)) %>%
   spread(period, area.km) %>%
-  mutate(dif = start - end)
-    
+  mutate(dif = end - start,
+         percIncrease = dif/start)
+
+periodDif %>% mutate(impacted = ifelse(Basin %in% c('Colorado', 'Inambari'), 'mined','notMined')) %>%
+  group_by(impacted, feature) %>%
+  summarise(meanDif = mean(dif),
+            meanPercentIncrease = mean(percIncrease))
 
 ## Look at total change and proportional change in area between start year and end year just for
 ## 'downstream' watersheds
 hsPeru %>%
   filter(!Basin %in% c('Upstream Manu', 'Manu - Co.', 'Reserve'),
+         year %in% c(1985,2018),
+         feature  %in% c('rivArea', 'nonRivArea')) %>%
+  group_by(year, feature) %>%
+  summarise(sum = sum(area.km)) %>%
+  spread(year, sum) %>%
+  mutate(diff = `2018` - `1985`,
+         prop = `2018`/`1985`)
+
+hsPeru %>%
+  filter(Basin %in% c('Inambari', 'Colorado'),
          year %in% c(1985,2018),
          feature  %in% c('rivArea', 'nonRivArea')) %>%
   group_by(year, feature) %>%
