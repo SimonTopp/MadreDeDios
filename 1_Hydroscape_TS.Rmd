@@ -120,8 +120,9 @@ hsPeru %>%
 ## Download the output from Google Earth Engine
 #drive_download('MdD_Exports/MdD_BasinDeforestation_RivRemoved.csv', 'out/Basin_Deforestation_RivRemoved.csv')
 
-## Clean up the dataset a little bit.
-basin <- read.csv('out/Basin_Deforestation_RivRemoved.csv') %>%
+## Clean up the dataset a little bit.  There are two versions, one with the river removed and one without.  After some discussion with co-authors we don't mask out river pixels.
+#basin <- read.csv('out/Basin_Deforestation_RivRemoved.csv') %>%
+basin <- read.csv('out/Basin_Deforestation_Lagged.csv') %>%
   select(BasinID, year, area, feature) %>%
   mutate(Basin = ifelse(BasinID == 6080540660, 'Upstream Manu', 
                         ifelse(BasinID == 6080548660, 'Reserve',
@@ -157,14 +158,15 @@ leg <- cowplot::get_legend(ggplot(basin, aes(x = year, y = cumulative)) +
 
 g <- gridExtra::grid.arrange(p1, p2, leg, ncol = 3, widths = c(1,1,.5), left = 'Cumulative Forest Loss (sq. km.)', bottom = 'Year', top = 'Forest Loss by Watershed') 
 
-ggsave('out/cumForestLoss.png', g, height = 8, width = 5, units = 'in')
+ggsave('figures/cumForestLoss_wRiv.png', g, height = 8, width = 5, units = 'in')
 
 
 ## Look at proportion converted to an aquatic system by watershed
 PropConv <- basin %>% filter(year == 2018) %>%
   select(Basin, cumulative, feature) %>%
   spread(feature, cumulative) %>%
-  mutate(proportion = ForestToWater/ForestToBarren) %>% mutate(mined = ifelse(Basin %in% c('Colorado', 'Inambari'), T, F))
+  mutate(total = ForestToWater + ForestToBarren,
+         proportion = ForestToWater/total) %>% mutate(mined = ifelse(Basin %in% c('Colorado', 'Inambari'), T, F))
 
 ## Look at proportion converted to an aquatic system by mined area
 PropConv %>% group_by(mined) %>% summarise(mean = mean(proportion))
@@ -175,6 +177,8 @@ Prop <- basin %>% filter(year == 2018) %>%
   summarise(sum = sum(cumulative))
 
 Prop$sum[Prop$feature == 'ForestToWater']/Prop$sum[Prop$feature == 'ForestToBarren']
+
+
 ```
 
 ## Now take a look at some other rivers impacted by ASGM
@@ -325,11 +329,53 @@ ggmap::ggmap(sq_map, darken = c(0.1, "white")) +
 
 ggsave('perStack.png', width = 6.5, units = 'in')
 
-
 # Generate the inset map
 peruLine <- rnaturalearth::ne_countries(scale = 'medium', country = 'Peru') %>% st_as_sf()
 ggplot(peruLine) + geom_sf() + theme_void()
 ggsave('PeruOutline.eps', width = 1, units = 'in')
+```
+
+
+```{r}
+## Map of study area
+## Programatically make figure 1
+library(ggmap)
+## Bring in google basemap imagery
+sq_hybrid <- get_map(location = c(lon = -70.3733, lat = -12.6302), zoom = 9, source ='google', maptype = "hybrid")
+
+sites.sf <- read.csv("in/Oxbow.lake.data.csv") %>%
+  bind_rows(read.csv("in/Mining.pond.data.csv")) %>%
+  bind_rows(read.csv("in/River.data.csv")) %>% 
+  select(Site.number, Site.type, Lat, Long) %>%
+  filter(!(Site.number == 9 & Site.type == 'river.downstream')) %>% #data entry error.
+  mutate(Site.type = factor(Site.type, levels = c('river.upstream', 'oxbow.lake.upstream', 'mining.pond', 'river.downstream', 'oxbow.lake.downstream'))) %>%
+  st_as_sf(coords = c('Long','Lat'), crs = 4326)
+
+
+mapView(sites.sf, zcol = 'Site.type')
+
+colors <- c("#56B4E9","#E69F00","#999999","#0072B2","#D55E00")
+
+ggmap::ggmap(sq_hybrid, darken = c(0.1, "white")) + 
+  geom_sf(data = basins.sf %>% st_transform(crs = 4326), 
+          inherit.aes = F,fill = 'transparent', color = 'black')  + 
+  geom_sf(data = sites.sf, aes(color = Site.type, fill = Site.type),
+          inherit.aes = F) +
+  ggthemes::theme_map() + 
+  theme(legend.position = c(0.7,0.6)) + 
+  scale_color_manual(values = c(colors),
+                     labels = c("River\nUpstream" ,"Oxbow\nUpstream",
+                                "Mining\nPond", "River\nDownstream",
+                                "Oxbow\nDownstream")) +
+   scale_fill_manual(values = c(colors),
+                     labels = c("River\nUpstream" ,"Oxbow\nUpstream",
+                                "Mining\nPond", "River\nDownstream",
+                                "Oxbow\nDownstream")) + 
+  #scale_size_manual(values = .7, label = 'Study Basins') +
+  labs(fill = 'Sample Sites', color= 'Sample Sites') 
+
+ggsave('figures/SampleSites.png', width = 4, height = 4, units ='in')
+
 ```
 
 

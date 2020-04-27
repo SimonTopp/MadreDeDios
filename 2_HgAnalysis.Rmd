@@ -80,7 +80,8 @@ g4 <- ggplot(water.all,aes(x=Site.type, y=Ave.THg.sed.ug.g,fill=Site.type))+
   scale_x_discrete(labels=c("River\nUpstream","Oxbow\nUpstream","Mining\nPond","River\nDownstream","Oxbow\nDownstream"))+
   scale_fill_manual(values=cb) +
   theme(legend.position="top") +
-  labs(fill="")
+  labs(fill="") + 
+  coord_cartesian(ylim = c(0,.3))
 
 g5 <- ggplot(water.all,aes(x=Site.type, y=TSS.mg.L, fill=Site.type))+
   geom_boxplot()+
@@ -109,6 +110,7 @@ gg1<-ggplot(water.all.THg, aes(x=ID, y=THg.water.ng.L, fill=Site.type))+
   geom_bar(stat="identity")+
   theme_bw()+labs(x="",y="")+
   theme(axis.text.x=element_blank(),
+        axis.ticks.x = element_blank(),
         legend.position="none")+
   labs(fill="")+
   scale_fill_manual(values=cb)
@@ -119,6 +121,7 @@ gg2<-ggplot(water.all.MeHg, aes(x=ID, y=MeHg.water.ng.L,  fill=Site.type))+
   theme_bw()+
   labs(x="",y="")+
   theme(axis.text.x=element_blank(),
+        axis.ticks.x = element_blank(),
         legend.position="none")+
   scale_fill_manual(values=cb)+
   labs(fill="")
@@ -127,8 +130,9 @@ gg2<-ggplot(water.all.MeHg, aes(x=ID, y=MeHg.water.ng.L,  fill=Site.type))+
 gg3<-ggplot(water.all.Percent, aes(x=ID, y=Percent.MeHg.water, fill=Site.type))+
   geom_bar(stat="identity")+
   theme_bw()+
-  labs(x="\ncount",y="",fill="")+
+  labs(x="\nIndividual Samples",y="",fill="")+
   theme(axis.text.x=element_blank(),
+        axis.ticks.x = element_blank(),
         legend.position="none")+
   scale_fill_manual(values=cb)
 
@@ -136,17 +140,19 @@ gg3<-ggplot(water.all.Percent, aes(x=ID, y=Percent.MeHg.water, fill=Site.type))+
 gg4<-ggplot(water.all.THg.sed, aes(x=ID,y=Ave.THg.sed.ug.g,fill=Site.type))+
   geom_bar(stat="identity")+
   theme_bw()+
-  labs(x="\ncount",y="")+
-  theme(axis.text.x=element_blank())+
+  labs(x="Individual Samples",y="")+
+  theme(axis.text.x=element_blank(),
+        axis.ticks.x = element_blank())+
   labs (fill="\ncount")+scale_fill_manual (values=cb)
 
 ## Sediment THg
 gg5<-ggplot(water.all.THg.TSS, aes(x=ID,y=TSS.mg.L,fill=Site.type))+
   geom_bar(stat="identity")+
   theme_bw()+
-  labs(x="\ncount",y="")+
-  theme(axis.text.x=element_blank())+
-  labs (fill="\ncount")+scale_fill_manual(values=cb)
+  labs(x="Individual Samples",y="")+
+  theme(axis.text.x=element_blank(),
+        axis.ticks.x = element_blank())+
+  labs(fill="\ncount")+scale_fill_manual(values=cb)
 
 
 #Combine plots into a water column figure and sediment figure
