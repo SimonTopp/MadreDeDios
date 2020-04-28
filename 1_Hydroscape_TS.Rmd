@@ -347,7 +347,6 @@ sites.sf <- read.csv("in/Oxbow.lake.data.csv") %>%
   bind_rows(read.csv("in/Mining.pond.data.csv")) %>%
   bind_rows(read.csv("in/River.data.csv")) %>% 
   select(Site.number, Site.type, Lat, Long) %>%
-  filter(!(Site.number == 9 & Site.type == 'river.downstream')) %>% #data entry error.
   mutate(Site.type = factor(Site.type, levels = c('river.upstream', 'oxbow.lake.upstream', 'mining.pond', 'river.downstream', 'oxbow.lake.downstream'))) %>%
   st_as_sf(coords = c('Long','Lat'), crs = 4326)
 
