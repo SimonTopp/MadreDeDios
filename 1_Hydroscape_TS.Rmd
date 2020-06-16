@@ -338,7 +338,7 @@ ggsave('PeruOutline.eps', width = 1, units = 'in')
 
 ```{r}
 ## Map of study area
-## Programatically make figure 1
+## 
 library(ggmap)
 ## Bring in google basemap imagery
 sq_hybrid <- get_map(location = c(lon = -70.3733, lat = -12.6302), zoom = 9, source ='google', maptype = "hybrid")
@@ -350,6 +350,10 @@ sites.sf <- read.csv("in/Oxbow.lake.data.csv") %>%
   mutate(Site.type = factor(Site.type, levels = c('river.upstream', 'oxbow.lake.upstream', 'mining.pond', 'river.downstream', 'oxbow.lake.downstream'))) %>%
   st_as_sf(coords = c('Long','Lat'), crs = 4326)
 
+fig2images = tibble(Lat = c( -12.756, -12.847,  -13.0157),
+                    Long = c(-70.4924,-69.9637, -70.5061),
+                    Site.type = 'Fig.2 Locations') %>%
+  st_as_sf(coords = c('Long', 'Lat'), crs = 4326)
 
 mapView(sites.sf, zcol = 'Site.type')
 
@@ -360,20 +364,24 @@ ggmap::ggmap(sq_hybrid, darken = c(0.1, "white")) +
           inherit.aes = F,fill = 'transparent', color = 'black')  + 
   geom_sf(data = sites.sf, aes(color = Site.type, fill = Site.type),
           inherit.aes = F) +
+  geom_sf(data = fig2images, aes(color = Site.type, fill = Site.type),
+          inherit.aes = F) +
   ggthemes::theme_map() + 
-  theme(legend.position = c(0.7,0.6)) + 
-  scale_color_manual(values = c(colors),
-                     labels = c("River\nUpstream" ,"Oxbow\nUpstream",
+  theme(legend.position = c(0.7,0.55)) + 
+  scale_color_manual(values = c('red', colors),
+                     labels = c('Fig.1 Image\nLocations', 
+                                "River\nUpstream" ,"Oxbow\nUpstream",
                                 "Mining\nPond", "River\nDownstream",
                                 "Oxbow\nDownstream")) +
-   scale_fill_manual(values = c(colors),
-                     labels = c("River\nUpstream" ,"Oxbow\nUpstream",
+   scale_fill_manual(values = c('red', colors),
+                     labels = c('Fig.1 Image\nLocations',
+                                "River\nUpstream" ,"Oxbow\nUpstream",
                                 "Mining\nPond", "River\nDownstream",
                                 "Oxbow\nDownstream")) + 
   #scale_size_manual(values = .7, label = 'Study Basins') +
   labs(fill = 'Sample Sites', color= 'Sample Sites') 
 
-ggsave('figures/SampleSites.png', width = 4, height = 4, units ='in')
+ggsave('figures/SampleSitesv2.png', width = 4, height = 4, units ='in')
 
 ```
 
