@@ -158,7 +158,7 @@ leg <- cowplot::get_legend(ggplot(basin, aes(x = year, y = cumulative)) +
 
 g <- gridExtra::grid.arrange(p1, p2, leg, ncol = 3, widths = c(1,1,.5), left = 'Cumulative Forest Loss (sq. km.)', bottom = 'Year', top = 'Forest Loss by Watershed') 
 
-ggsave('figures/cumForestLoss_wRiv.png', g, height = 8, width = 5, units = 'in')
+ggsave('figures/Final/cumForestLoss_wRiv.png', g, height = 8, width = 5, units = 'in', dpi = 600)
 
 
 ## Look at proportion converted to an aquatic system by watershed
@@ -381,7 +381,7 @@ ggmap::ggmap(sq_hybrid, darken = c(0.1, "white")) +
   #scale_size_manual(values = .7, label = 'Study Basins') +
   labs(fill = 'Sample Sites', color= 'Sample Sites') 
 
-ggsave('figures/SampleSitesv2.png', width = 4, height = 4, units ='in')
+ggsave('figures/Final/SampleSitesv2.png', width = 4, height = 4, units ='in', dpi = 600)
 
 ```
 
