@@ -20,7 +20,7 @@ oxbow.all<-read.csv("in/Oxbow.lake.data.csv")
 mining.pond.all<-read.csv("in/Mining.pond.data.csv")
 river.all<-read.csv("in/River.data.csv")
 
-river.all.subset<-river.all[,c("Site.number","Site.type","Collection.date","Collection.time","Lat","Long","TSS.mg.L","Ave.THg.sed.ug.g","THg.water.ng.L","MeHg.water.ng.L","Percent.MeHg.water")]
+river.all.subset<-river.all[,c("Site.number","Site.type","Collection.date","Collection.time","Lat","Long","TSS.mg.L","Percent.C.sed","Ave.THg.sed.ug.g","THg.water.ng.L","MeHg.water.ng.L","Percent.MeHg.water")]
 
 ## Update the oxbow lake/mining pond coordinates with the centerpoints pulled from EE
 ## This is just because some of the sample points were on the edges and for analysis we
@@ -33,7 +33,7 @@ oxbow.all <- oxbow.all %>% select(-Lat, -Long) %>%
 oxbow.mining.all<-rbind(oxbow.all,mining.pond.all)
 
 water.all<-rbind(oxbow.mining.all,river.all.subset) %>%
-  mutate(Site.type = factor(Site.type, level =c("river.upstream", "oxbow.lake.upstream", "mining.pond", "river.downstream", "oxbow.lake.downstream"),
+  mutate(Site.type = factor(Site.type, levels = c("river.upstream", "oxbow.lake.upstream", "mining.pond", "river.downstream", "oxbow.lake.downstream"),
                             labels = c("River Upstream", "Oxbow Upstream", "Mining Pond", "River Downstream", "Oxbow Downstream")))
 ```
 
@@ -178,15 +178,18 @@ gg5<-ggplot(water.all.THg.TSS, aes(x=ID,y=TSS.mg.L,fill=Site.type))+
 
 #Water column figure
 g <- ggpubr::ggarrange(g1,gg1,g2,gg2,g3,gg3,nrow=3,ncol=2,common.legend=TRUE)
+g
 
 ggsave('figures/Final/HgAnalysis.png', plot = g, width = 7, units = 'in', dpi = 600)
 
 #Sediment figure
 ggpubr::ggarrange(g4,gg4,nrow=1,ncol=2,common.legend=TRUE)
+
 ggsave('figures/Final/HgSed.png', width = 7, height = 3.5, units = 'in', dpi = 600)
 
 ##TSS Figure
 ggpubr::ggarrange(g5,gg5,nrow=1,ncol=2,common.legend=TRUE)
+
 ggsave('figures/Final/HgTSS.png', width = 7, height = 3.5, units = 'in', dpi = 600)
 ##Water.all and tss mg/L column same as gg4 but with TSS
 ```
@@ -232,13 +235,25 @@ shapiro.test(residuals(object =aov(Ave.THg.sed.ug.g~Site.type,data=water.all)  )
 kruskal.test(Ave.THg.sed.ug.g ~ Site.type, data = water.all)
 FSA::dunnTest(Ave.THg.sed.ug.g ~ Site.type, data = water.all)
 
+#Compare TSS concentrations by surface water type
+shapiro.test(residuals(object =aov(TSS.mg.L~Site.type,data=water.all)  ))
+#p<0.05-data are not normally distributed
+kruskal.test(TSS.mg.L ~ Site.type, data = water.all)
+FSA::dunnTest(TSS.mg.L ~ Site.type, data = water.all)
+
+#Compare sediment %C  by surface water type
+shapiro.test(residuals(object =aov(Percent.C.sed~Site.type,data=water.all)  ))
+#p<0.05-data are not normally distributed
+kruskal.test(Percent.C.sed ~ Site.type, data = water.all)
+FSA::dunnTest(Percent.C.sed ~ Site.type, data = water.all)
+
 #TSS vs. THg
 p1 <- ggplot(water.all, aes(x=TSS.mg.L, y=THg.water.ng.L))+
   geom_point(size=2.5,alpha=.7, aes(color=Site.type))+
   labs(y="THg (ng/L)",x="Total Suspended Solids (mg/L)",color="") +
   scale_color_manual(values=cb) +
-  #scale_x_continuous(trans = 'log10') +
-  #scale_y_continuous(trans = 'log10') +
+  scale_x_continuous(trans = 'log10') +
+  scale_y_continuous(trans = 'log10') +
   ggpmisc::stat_fit_glance(method = 'lm',
                            label.y = 'top',
                            label.x = 'middle',
@@ -253,8 +268,8 @@ p2 <- ggplot(water.all, aes(x=TSS.mg.L, y=MeHg.water.ng.L))+
   geom_point(size=2.5,alpha=.7, aes(color=Site.type))+
   labs(y="MeHg (ng/L)",x="Total Suspended Solids (mg/L)",color="") +
   scale_color_manual(values=cb) +
-  #scale_x_continuous(trans = 'log10') +
-  #scale_y_continuous(trans = 'log10') +
+  scale_x_continuous(trans = 'log10') +
+  scale_y_continuous(trans = 'log10') +
   ggpmisc::stat_fit_glance(method = 'lm',
                            label.y = 'top',
                            label.x = 'middle',
@@ -267,7 +282,7 @@ p2 <- ggplot(water.all, aes(x=TSS.mg.L, y=MeHg.water.ng.L))+
 g <- ggpubr::ggarrange(p1, p2,nrow=1,ncol=2,common.legend=TRUE)
 g
 
-ggsave('figures/Final/TSSvTHgvMeHg.png', plot = g, width = 7, height = 3, units = 'in', dpi = 600)
+ggsave('figures/Final/TSSvTHgvMeHgLog.png', plot = g, width = 7, height = 3, units = 'in', dpi = 600)
 
 ## Look at R2 and regression results
 summary(lm(data=water.all,THg.water.ng.L~TSS.mg.L))
