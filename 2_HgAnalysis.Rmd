@@ -32,9 +32,14 @@ oxbow.all <- oxbow.all %>% select(-Lat, -Long) %>%
 
 oxbow.mining.all<-rbind(oxbow.all,mining.pond.all)
 
+water.labels <- c("River Upstream", "Oxbow Upstream", "Mining Pond", "River Downstream", "Oxbow Downstream")
+fig.labels <- c("River\nUpstream","Oxbow\nUpstream","Mining\nPond","River\nDownstream","Oxbow\nDownstream")
+
+water.labels <- c("Río Arriba", "Cocha Arriba", "Estanque Minero", "Río Abajo", "Cocha Abajo")
+fig.labels <- c("Río\nArriba","Cocha\nArriba","Estanque\nMinero","Río\nAbajo", "Cocha\nAbajo")
+
 water.all<-rbind(oxbow.mining.all,river.all.subset) %>%
-  mutate(Site.type = factor(Site.type, levels = c("river.upstream", "oxbow.lake.upstream", "mining.pond", "river.downstream", "oxbow.lake.downstream"),
-                            labels = c("River Upstream", "Oxbow Upstream", "Mining Pond", "River Downstream", "Oxbow Downstream")))
+  mutate(Site.type = factor(Site.type, levels = c("river.upstream", "oxbow.lake.upstream", "mining.pond", "river.downstream", "oxbow.lake.downstream"), labels = water.labels))
 ```
 
 ## Make some figures
@@ -44,7 +49,7 @@ water.all<-rbind(oxbow.mining.all,river.all.subset) %>%
 cb <- c("#56B4E9","#E69F00","#999999","#0072B2","#D55E00")
 
 ## Total Hg
-tukeyThg <- tibble(Site.type = c('River Upstream', 'Oxbow Upstream', 'Mining Pond', 'River Downstream', 'Oxbow Downstream'), TukeyStats = c('a','a','ab','b','a'))
+tukeyThg <- tibble(Site.type = water.labels, TukeyStats = c('a','a','ab','b','a'))
 
 g1<-ggplot(water.all,aes(x=Site.type, y=THg.water.ng.L)) + 
   geom_boxplot(aes(fill=Site.type)) +
@@ -53,61 +58,68 @@ g1<-ggplot(water.all,aes(x=Site.type, y=THg.water.ng.L)) +
   scale_y_continuous(trans = 'log10') +
   theme_bw() + 
   theme(axis.text.x=element_blank(),
+        axis.title.x = element_blank(),
         legend.position="top") + 
   scale_fill_manual(values=cb) + 
   labs(fill="") 
 
 
 ## MeHg
-tukeyMeHg <- tibble(Site.type = c('River Upstream', 'Oxbow Upstream', 'Mining Pond', 'River Downstream', 'Oxbow Downstream'), TukeyStats = c('a','ab','b','b','b'))
+tukeyMeHg <- tibble(Site.type = water.labels, TukeyStats = c('a','ab','b','b','b'))
   
 g2<-ggplot(water.all,aes(x=Site.type, y=MeHg.water.ng.L)) + 
   geom_boxplot(aes(fill=Site.type)) +
   geom_label(data = tukeyMeHg, aes(y = Inf, label = TukeyStats), vjust = 2, label.size = .2) +
   theme_bw()+
-  labs(x="",y="MeHg (ng/L)")+
+  labs(y="MeHg (ng/L)")+
   theme(axis.text.x=element_blank(),
+        axis.title.x = element_blank(),
         legend.position="none") +
   scale_fill_manual(values=cb)
 
 ## Percent MeHg
 
-tukeyPMeHg <- tibble(Site.type = c('River Upstream', 'Oxbow Upstream', 'Mining Pond', 'River Downstream', 'Oxbow Downstream'), TukeyStats = c('a','a','a','b','a'))
+tukeyPMeHg <- tibble(Site.type = water.labels, TukeyStats = c('a','a','a','b','a'))
 
 g3<-ggplot(water.all,aes(x=Site.type, y=Percent.MeHg.water)) + 
   geom_boxplot(aes(fill=Site.type)) +
   geom_label(data = tukeyPMeHg, aes(y = Inf, label = TukeyStats), vjust = 2, label.size = .2) +
   theme_bw()+
-  theme(axis.text.x = element_text(angle = 20, hjust = 1)) +
-  labs(x="",y="Percent Hg\nas MeHg")+
+  theme(axis.text.x = element_text(angle = 27, hjust = 1),
+        axis.title.x = element_blank()) +
+  #labs(y="Percent Hg\nas MeHg")+
+  labs(y = 'Porcentaje de\nHg como MeHg') +
   scale_fill_manual(values=cb) +
-  scale_x_discrete(labels=c("River\nUpstream","Oxbow\nUpstream","Mining\nPond","River\nDownstream","Oxbow\nDownstream"))
+  scale_x_discrete(labels=fig.labels)
 
 ## Average Sediment THg
 
-tukeySTHg <- tibble(Site.type = c('River Upstream', 'Oxbow Upstream', 'Mining Pond', 'River Downstream', 'Oxbow Downstream'), TukeyStats = c('a','ab','ab','a','b'))
+tukeySTHg <- tibble(Site.type = water.labels, TukeyStats = c('a','ab','ab','a','b'))
 
 g4 <- ggplot(water.all,aes(x=Site.type, y=Ave.THg.sed.ug.g)) + 
   geom_boxplot(aes(fill=Site.type)) +
   geom_label(data = tukeySTHg, aes(y = Inf, label = TukeyStats), vjust = 2, label.size = .2) +
   theme_bw()+
-  theme(axis.text.x = element_text(angle = 20, hjust = 1)) +
-  labs(x="", y="Sediment THg\n(ug/g)") +
-  scale_x_discrete(labels=c("River\nUpstream","Oxbow\nUpstream","Mining\nPond","River\nDownstream","Oxbow\nDownstream"))+
+  theme(axis.text.x = element_text(angle = 27, hjust = 1),
+        axis.title.x = element_blank()) +
+  #labs(y="Sediment THg\n(ug/g)") +
+  labs(y="Sedimento THg\n(ug/g)") +
+  scale_x_discrete(labels=fig.labels)+
+  scale_y_continuous(trans = 'log10') +
   scale_fill_manual(values=cb) +
   theme(legend.position="top") +
-  labs(fill="") + 
-  coord_cartesian(ylim = c(0,.3))
+  labs(fill="")
 
-tukeyTSS <- tibble(Site.type = c('River Upstream', 'Oxbow Upstream', 'Mining Pond', 'River Downstream', 'Oxbow Downstream'), TukeyStats = c('ab','a','ab','c','b'))
+tukeyTSS <- tibble(Site.type = water.labels, TukeyStats = c('ab','a','ab','c','b'))
 
 g5 <- ggplot(water.all,aes(x=Site.type, y=TSS.mg.L)) + 
   geom_boxplot(aes(fill=Site.type)) +
   geom_label(data = tukeyTSS, aes(y = Inf, label = TukeyStats), vjust = 2, label.size = .2) +
   theme_bw()+
-  theme(axis.text.x = element_text(angle = 20, hjust = 1)) +
-  labs(x="", y="TSS (mg/L)") +
-  scale_x_discrete(labels=c("River\nUpstream","Oxbow\nUpstream","Mining\nPond","River\nDownstream","Oxbow\nDownstream"))+
+  theme(axis.text.x = element_text(angle = 27, hjust = 1),
+        axis.title.x = element_blank()) +
+  labs(y="TSS (mg/L)") +
+  scale_x_discrete(labels=fig.labels)+
   scale_fill_manual(values=cb) +
   theme(legend.position="top") +
   labs(fill="")
@@ -127,10 +139,11 @@ water.all.THg.TSS$ID<-seq.int(nrow(water.all.THg.TSS))
 #Total Hg
 gg1<-ggplot(water.all.THg, aes(x=ID, y=THg.water.ng.L, fill=Site.type))+
   geom_bar(stat="identity")+
-  theme_bw()+labs(x="",y="")+
+  theme_bw() +
   theme(axis.text.x=element_blank(),
         axis.ticks.x = element_blank(),
-        legend.position="none")+
+        legend.position="none",
+        axis.title = element_blank())+
   labs(fill="")+
   scale_fill_manual(values=cb)
 
@@ -138,10 +151,11 @@ gg1<-ggplot(water.all.THg, aes(x=ID, y=THg.water.ng.L, fill=Site.type))+
 gg2<-ggplot(water.all.MeHg, aes(x=ID, y=MeHg.water.ng.L,  fill=Site.type))+
   geom_bar(stat="identity")+
   theme_bw()+
-  labs(x="",y="")+
+
   theme(axis.text.x=element_blank(),
         axis.ticks.x = element_blank(),
-        legend.position="none")+
+        legend.position="none",
+        axis.title = element_blank())+
   scale_fill_manual(values=cb)+
   labs(fill="")
 
@@ -149,17 +163,20 @@ gg2<-ggplot(water.all.MeHg, aes(x=ID, y=MeHg.water.ng.L,  fill=Site.type))+
 gg3<-ggplot(water.all.Percent, aes(x=ID, y=Percent.MeHg.water, fill=Site.type))+
   geom_bar(stat="identity")+
   theme_bw()+
-  labs(x="\nIndividual Samples",y="",fill="")+
+  #labs(x="\nIndividual Samples",fill="")+
+  labs(x = 'Muestras Individuales') +
   theme(axis.text.x=element_blank(),
         axis.ticks.x = element_blank(),
-        legend.position="none")+
+        legend.position="none",
+        axis.title.y = element_blank())+
   scale_fill_manual(values=cb)
 
 ## Sediment THg
 gg4<-ggplot(water.all.THg.sed, aes(x=ID,y=Ave.THg.sed.ug.g,fill=Site.type))+
   geom_bar(stat="identity")+
   theme_bw()+
-  labs(x="Individual Samples",y="")+
+  #labs(x="Individual Samples",y="")+
+  labs(x = 'Muestras Individuales', y = '') +
   theme(axis.text.x=element_blank(),
         axis.ticks.x = element_blank())+
   labs (fill="\ncount")+scale_fill_manual (values=cb)
@@ -168,7 +185,8 @@ gg4<-ggplot(water.all.THg.sed, aes(x=ID,y=Ave.THg.sed.ug.g,fill=Site.type))+
 gg5<-ggplot(water.all.THg.TSS, aes(x=ID,y=TSS.mg.L,fill=Site.type))+
   geom_bar(stat="identity")+
   theme_bw()+
-  labs(x="Individual Samples",y="")+
+  #labs(x="Individual Samples",y="") +
+  labs(x = 'Muestras Individuales', y = '') +
   theme(axis.text.x=element_blank(),
         axis.ticks.x = element_blank())+
   labs(fill="\ncount")+scale_fill_manual(values=cb)
@@ -180,7 +198,7 @@ gg5<-ggplot(water.all.THg.TSS, aes(x=ID,y=TSS.mg.L,fill=Site.type))+
 g <- ggpubr::ggarrange(g1,gg1,g2,gg2,g3,gg3,nrow=3,ncol=2,common.legend=TRUE)
 g
 
-ggsave('figures/Final/HgAnalysis.png', plot = g, width = 7, units = 'in', dpi = 600)
+ggsave('figures/Spanish/HgAnalysis.png', plot = g, width = 7, units = 'in', dpi = 600)
 
 #Sediment figure
 ggpubr::ggarrange(g4,gg4,nrow=1,ncol=2,common.legend=TRUE)
@@ -190,7 +208,7 @@ ggsave('figures/Final/HgSed.png', width = 7, height = 3.5, units = 'in', dpi = 6
 ##TSS Figure
 ggpubr::ggarrange(g5,gg5,nrow=1,ncol=2,common.legend=TRUE)
 
-ggsave('figures/Final/HgTSS.png', width = 7, height = 3.5, units = 'in', dpi = 600)
+ggsave('figures/Spanish/HgTSS.png', width = 7, height = 3.5, units = 'in', dpi = 600)
 ##Water.all and tss mg/L column same as gg4 but with TSS
 ```
 
@@ -250,7 +268,8 @@ FSA::dunnTest(Percent.C.sed ~ Site.type, data = water.all)
 #TSS vs. THg
 p1 <- ggplot(water.all, aes(x=TSS.mg.L, y=THg.water.ng.L))+
   geom_point(size=2.5,alpha=.7, aes(color=Site.type))+
-  labs(y="THg (ng/L)",x="Total Suspended Solids (mg/L)",color="") +
+  #labs(y="THg (ng/L)",x="Total Suspended Solids (mg/L)",color="") +
+  labs(y="THg (ng/L)",x="TSS (mg/L)",color="") +
   scale_color_manual(values=cb) +
   scale_x_continuous(trans = 'log10') +
   scale_y_continuous(trans = 'log10') +
@@ -266,7 +285,8 @@ p1 <- ggplot(water.all, aes(x=TSS.mg.L, y=THg.water.ng.L))+
 ## TSS vs MeHg
 p2 <- ggplot(water.all, aes(x=TSS.mg.L, y=MeHg.water.ng.L))+
   geom_point(size=2.5,alpha=.7, aes(color=Site.type))+
-  labs(y="MeHg (ng/L)",x="Total Suspended Solids (mg/L)",color="") +
+  #labs(y="MeHg (ng/L)",x="Total Suspended Solids (mg/L)",color="") +
+  labs(y="MeHg (ng/L)",x="TSS (mg/L)",color="") +
   scale_color_manual(values=cb) +
   scale_x_continuous(trans = 'log10') +
   scale_y_continuous(trans = 'log10') +
@@ -282,7 +302,7 @@ p2 <- ggplot(water.all, aes(x=TSS.mg.L, y=MeHg.water.ng.L))+
 g <- ggpubr::ggarrange(p1, p2,nrow=1,ncol=2,common.legend=TRUE)
 g
 
-ggsave('figures/Final/TSSvTHgvMeHgLog.png', plot = g, width = 7, height = 3, units = 'in', dpi = 600)
+ggsave('figures/Spanish/TSSvTHgvMeHgLog.png', plot = g, width = 7, height = 3, units = 'in', dpi = 600)
 
 ## Look at R2 and regression results
 summary(lm(data=water.all,THg.water.ng.L~TSS.mg.L))
@@ -325,14 +345,14 @@ kruskal.test(MeHg.water.ng.L ~ Site.type, data = water.all.norm)
 FSA::dunnTest(MeHg.water.ng.L~ Site.type, data = water.all.norm)
 print(FSA::dunnTest(MeHg.water.ng.L ~ Site.type, data = water.all.norm), dunn.test.results = T)
 
-tukeyMeHg <- tibble(Site.type = c('River Upstream', 'Oxbow Upstream', 'Mining Pond', 'River Downstream', 'Oxbow Downstream'), TukeyStats = c('a','a','a','ab','a'))
+tukeyMeHg <- tibble(Site.type = water.labels, TukeyStats = c('a','a','a','ab','a'))
   
 g2<-ggplot(water.all.norm,aes(x=Site.type, y=MeHg.water.ng.L)) + 
   geom_boxplot(aes(fill=Site.type)) +
   geom_label(data = tukeyMeHg, aes(y = Inf, label = TukeyStats), vjust = 2, label.size = .2) +
   scale_y_continuous(trans = 'log10') +
   theme_bw()+
-  labs(x="",y="MeHg/TSS\n(ng/mg)")+
+  labs(y="MeHg/TSS\n(ng/mg)")+
   theme(axis.text.x=element_blank(),
         legend.position="none") +
   scale_fill_manual(values=cb)
