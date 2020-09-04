@@ -35,8 +35,8 @@ oxbow.mining.all<-rbind(oxbow.all,mining.pond.all)
 water.labels <- c("River Upstream", "Oxbow Upstream", "Mining Pond", "River Downstream", "Oxbow Downstream")
 fig.labels <- c("River\nUpstream","Oxbow\nUpstream","Mining\nPond","River\nDownstream","Oxbow\nDownstream")
 
-water.labels <- c("Río Arriba", "Cocha Arriba", "Estanque Minero", "Río Abajo", "Cocha Abajo")
-fig.labels <- c("Río\nArriba","Cocha\nArriba","Estanque\nMinero","Río\nAbajo", "Cocha\nAbajo")
+# water.labels <- c("Río Arriba", "Cocha Arriba", "Estanque Minero", "Río Abajo", "Cocha Abajo")
+# fig.labels <- c("Río\nArriba","Cocha\nArriba","Estanque\nMinero","Río\nAbajo", "Cocha\nAbajo")
 
 water.all<-rbind(oxbow.mining.all,river.all.subset) %>%
   mutate(Site.type = factor(Site.type, levels = c("river.upstream", "oxbow.lake.upstream", "mining.pond", "river.downstream", "oxbow.lake.downstream"), labels = water.labels))
@@ -283,8 +283,10 @@ p1 <- ggplot(water.all, aes(x=TSS.mg.L, y=THg.water.ng.L))+
     theme_bw()
 
 ## TSS vs MeHg
-p2 <- ggplot(water.all, aes(x=TSS.mg.L, y=MeHg.water.ng.L))+
-  geom_point(size=2.5,alpha=.7, aes(color=Site.type))+
+check <- water.all %>% mutate(type = ifelse(Site.type %in% c('Río Arriba', 'Río Abajo'), 'lotic', 'lentic'))
+
+p2 <- ggplot(check, aes(x=TSS.mg.L, y=MeHg.water.ng.L, color = type))+
+  geom_point(size=2.5,alpha=.7)+
   #labs(y="MeHg (ng/L)",x="Total Suspended Solids (mg/L)",color="") +
   labs(y="MeHg (ng/L)",x="TSS (mg/L)",color="") +
   scale_color_manual(values=cb) +

@@ -124,8 +124,8 @@ hsPeru %>%
 #basin <- read.csv('out/Basin_Deforestation_RivRemoved.csv') %>%
 basin <- read.csv('out/Basin_Deforestation_Lagged.csv') %>%
   select(BasinID, year, area, feature) %>%
-  mutate(Basin = ifelse(BasinID == 6080540660, 'Arriba de Manu',#'Upstream Manu', 
-                        ifelse(BasinID == 6080548660, 'Área de conservación', #'Reserve',
+  mutate(Basin = ifelse(BasinID == 6080540660, 'Upstream Manu', #'Arriba de Manu',
+                        ifelse(BasinID == 6080548660,'Conservation Area', #'Área de conservación',
                                ifelse(BasinID == 6080540560, 'UpstreamManuNorth',
                                 ifelse(BasinID == 6080549240, 'Manu - Co.',
                                   ifelse(BasinID == 6080549470, 'Colorado',
@@ -154,15 +154,14 @@ p2 <- ggplot(basin %>% filter(feature == 'ForestToWater'),
 
 leg <- cowplot::get_legend(ggplot(basin, aes(x = year, y = cumulative)) + 
   geom_col(aes(fill = feature)) +
-  scale_fill_manual('Tipo de\nConversión', values = c('#5d4235','#1e96a6'), labels = c('A Estéril', 'A Agua')))
-    #scale_fill_manual('Conversion\nType', values = c('#5d4235','#1e96a6'), labels = c('To Barren', 'To Water'))) 
+  #scale_fill_manual('Tipo de\nConversión', values = c('#5d4235','#1e96a6'), labels = c('A Estéril', 'A Agua')))
+  scale_fill_manual('Conversion\nType', values = c('#5d4235','#1e96a6'), labels = c('To Barren', 'To Water'))) 
 
-# g <- gridExtra::grid.arrange(p1, p2, leg, ncol = 3, widths = c(1,1,.5), left = 'Cumulative Forest Loss (sq. km.)', bottom = 'Year', top = 'Forest Loss by Watershed') 
+g <- gridExtra::grid.arrange(p1, p2, leg, ncol = 3, widths = c(1,1,.5), left = 'Cumulative Forest Loss (sq. km.)', bottom = 'Year', top = 'Forest Loss by Watershed') 
 
-g <- gridExtra::grid.arrange(p1, p2, leg, ncol = 3, widths = c(1,1,.5), left = grid::textGrob(bquote('Pérdida acumulada de bosques ('~km^2*')'), rot = 90), bottom = 'Año', top = 'Pérdida de Bosques por Cuenca') 
+#g <- gridExtra::grid.arrange(p1, p2, leg, ncol = 3, widths = c(1,1,.5), left = grid::textGrob(bquote('Pérdida acumulada de bosques ('~km^2*')'), rot = 90), bottom = 'Año', top = 'Pérdida de Bosques por Cuenca') 
 
-ggsave('figures/Spanish/cumForestLoss_wRiv.png', g, height = 8, width = 5, units = 'in', dpi = 600)
-
+ggsave('figures/Final/cumForestLoss_wRiv.png', g, height = 8, width = 5, units = 'in', dpi = 600)
 
 ## Look at proportion converted to an aquatic system by watershed
 PropConv <- basin %>% filter(year == 2018) %>%
@@ -355,8 +354,11 @@ sites.sf <- read.csv("in/Oxbow.lake.data.csv") %>%
 
 fig2images = tibble(Lat = c( -12.756, -12.847,  -13.0157),
                     Long = c(-70.4924,-69.9637, -70.5061),
-                    Site.type = 'Fig.2 Locations') %>%
+                    Site.type = 'Fig.2 Locations',
+                    Site.number = 'XX') %>%
   st_as_sf(coords = c('Long', 'Lat'), crs = 4326)
+
+sites.sf <- sites.sf %>% rbind(fig2images) %>% st_as_sf()
 
 mapView(sites.sf, zcol = 'Site.type')
 
@@ -367,21 +369,17 @@ ggmap::ggmap(sq_hybrid, darken = c(0.1, "white")) +
           inherit.aes = F,fill = 'transparent', color = 'black')  + 
   geom_sf(data = sites.sf, aes(color = Site.type, fill = Site.type),
           inherit.aes = F) +
-  geom_sf(data = fig2images, aes(color = Site.type, fill = Site.type),
-          inherit.aes = F) +
   ggthemes::theme_map() + 
   theme(legend.position = c(0.7,0.55)) + 
-  scale_color_manual(values = c('red', colors),
-                     labels = c('Fig.1 Image\nLocations', 
-                                "River\nUpstream" ,"Oxbow\nUpstream",
+  scale_color_manual(values = c(colors, 'red'),
+                     labels = c("River\nUpstream" ,"Oxbow\nUpstream",
                                 "Mining\nPond", "River\nDownstream",
-                                "Oxbow\nDownstream")) +
-   scale_fill_manual(values = c('red', colors),
-                     labels = c('Fig.1 Image\nLocations',
-                                "River\nUpstream" ,"Oxbow\nUpstream",
+                                "Oxbow\nDownstream", 'Fig.1 Image\nLocations')) +
+   scale_fill_manual(values = c(colors, 'red'),
+                    labels = c("River\nUpstream" ,"Oxbow\nUpstream",
                                 "Mining\nPond", "River\nDownstream",
-                                "Oxbow\nDownstream")) + 
-  #scale_size_manual(values = .7, label = 'Study Basins') +
+                                "Oxbow\nDownstream", 'Fig.1 Image\nLocations')) +
+                    #scale_size_manual(values = .7, label = 'Study Basins') +
   labs(fill = 'Sample Sites', color= 'Sample Sites') 
 
 
@@ -409,9 +407,7 @@ ggmap::ggmap(sq_hybrid, darken = c(0.1, "white")) +
   labs(fill = 'Sitios de Muestras', color= 'Sitios de Muestras') 
 
 
-fig.labels <- c("Río\nArriba","Cocha\nArriba","Estanque\nMinero","Río\nAbajo", "Cocha\nAbajo")
-
-ggsave('figures/Spanish/SampleSitesv2.png', width = 4, height = 4, units ='in', dpi = 600)
+ggsave('figures/Final/SampleSitesv2.png', width = 4, height = 4, units ='in', dpi = 600)
 
 ```
 
