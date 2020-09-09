@@ -32,11 +32,14 @@ oxbow.all <- oxbow.all %>% select(-Lat, -Long) %>%
 
 oxbow.mining.all<-rbind(oxbow.all,mining.pond.all)
 
+
+## English Labels
 water.labels <- c("River Upstream", "Oxbow Upstream", "Mining Pond", "River Downstream", "Oxbow Downstream")
 fig.labels <- c("River\nUpstream","Oxbow\nUpstream","Mining\nPond","River\nDownstream","Oxbow\nDownstream")
 
-# water.labels <- c("Río Arriba", "Cocha Arriba", "Estanque Minero", "Río Abajo", "Cocha Abajo")
-# fig.labels <- c("Río\nArriba","Cocha\nArriba","Estanque\nMinero","Río\nAbajo", "Cocha\nAbajo")
+## Make Alternate labels for Spanish Version
+water.labels <- c("Río Arriba", "Lagos de Meandros Río Arriba", "Pozas de Minero", "Río Abajo", "Lagos de Meandros Río Abajo")
+fig.labels <- c("Río Arriba","Lagos de Meandros\nRío Arriba","Pozas de\nMinero","Río Abajo", "Lagos de Meandros\nRío Abajo")
 
 water.all<-rbind(oxbow.mining.all,river.all.subset) %>%
   mutate(Site.type = factor(Site.type, levels = c("river.upstream", "oxbow.lake.upstream", "mining.pond", "river.downstream", "oxbow.lake.downstream"), labels = water.labels))
@@ -102,11 +105,11 @@ g4 <- ggplot(water.all,aes(x=Site.type, y=Ave.THg.sed.ug.g)) +
   theme_bw()+
   theme(axis.text.x = element_text(angle = 27, hjust = 1),
         axis.title.x = element_blank()) +
-  #labs(y="Sediment THg\n(ug/g)") +
-  labs(y="Sedimento THg\n(ug/g)") +
+  labs(y="Sedimento HgT\n(ug/g)") +
+  #labs(y="Sedimento THg\n(ug/g)") +
   scale_x_discrete(labels=fig.labels)+
   scale_y_continuous(trans = 'log10') +
-  scale_fill_manual(values=cb) +
+  scale_fill_manual(values=cb, labels = fig.labels) +
   theme(legend.position="top") +
   labs(fill="")
 
@@ -118,7 +121,8 @@ g5 <- ggplot(water.all,aes(x=Site.type, y=TSS.mg.L)) +
   theme_bw()+
   theme(axis.text.x = element_text(angle = 27, hjust = 1),
         axis.title.x = element_blank()) +
-  labs(y="TSS (mg/L)") +
+  #labs(y="TSS (mg/L)") +
+  labs(y="SST (mg/L)") +
   scale_x_discrete(labels=fig.labels)+
   scale_fill_manual(values=cb) +
   theme(legend.position="top") +
@@ -195,18 +199,19 @@ gg5<-ggplot(water.all.THg.TSS, aes(x=ID,y=TSS.mg.L,fill=Site.type))+
 #Combine plots into a water column figure and sediment figure
 
 #Water column figure
-g <- ggpubr::ggarrange(g1,gg1,g2,gg2,g3,gg3,nrow=3,ncol=2,common.legend=TRUE)
+lg <- ggpubr::get_legend(g4)
+g <- ggpubr::ggarrange(g1,gg1,g2,gg2,g3,gg3,nrow=3,ncol=2,common.legend=TRUE,legend.grob = lg)
 g
 
 ggsave('figures/Spanish/HgAnalysis.png', plot = g, width = 7, units = 'in', dpi = 600)
 
 #Sediment figure
-ggpubr::ggarrange(g4,gg4,nrow=1,ncol=2,common.legend=TRUE)
+ggpubr::ggarrange(g4,gg4,nrow=1,ncol=2,common.legend=TRUE, legend.grob = lg)
 
-ggsave('figures/Final/HgSed.png', width = 7, height = 3.5, units = 'in', dpi = 600)
+ggsave('figures/Spanish/HgSed.png', width = 7, height = 3.5, units = 'in', dpi = 600)
 
 ##TSS Figure
-ggpubr::ggarrange(g5,gg5,nrow=1,ncol=2,common.legend=TRUE)
+ggpubr::ggarrange(g5,gg5,nrow=1,ncol=2,common.legend=TRUE, legend.grob = lg)
 
 ggsave('figures/Spanish/HgTSS.png', width = 7, height = 3.5, units = 'in', dpi = 600)
 ##Water.all and tss mg/L column same as gg4 but with TSS
@@ -269,8 +274,8 @@ FSA::dunnTest(Percent.C.sed ~ Site.type, data = water.all)
 p1 <- ggplot(water.all, aes(x=TSS.mg.L, y=THg.water.ng.L))+
   geom_point(size=2.5,alpha=.7, aes(color=Site.type))+
   #labs(y="THg (ng/L)",x="Total Suspended Solids (mg/L)",color="") +
-  labs(y="THg (ng/L)",x="TSS (mg/L)",color="") +
-  scale_color_manual(values=cb) +
+  labs(y="HgT (ng/L)",x="Sólidos Suspendidos Totales (mg/L)",color="") +
+  scale_color_manual(values=cb, labels = fig.labels) +
   scale_x_continuous(trans = 'log10') +
   scale_y_continuous(trans = 'log10') +
   ggpmisc::stat_fit_glance(method = 'lm',
@@ -280,15 +285,14 @@ p1 <- ggplot(water.all, aes(x=TSS.mg.L, y=THg.water.ng.L))+
                            mapping = aes(label = sprintf('R^2~"="~%.3f~~italic(P)~"="~%.2g',
                                 stat(r.squared), stat(p.value))),
                   parse = TRUE) +
-    theme_bw()
+    theme_bw() +
+  theme(legend.position = 'top')
 
 ## TSS vs MeHg
-check <- water.all %>% mutate(type = ifelse(Site.type %in% c('Río Arriba', 'Río Abajo'), 'lotic', 'lentic'))
-
-p2 <- ggplot(check, aes(x=TSS.mg.L, y=MeHg.water.ng.L, color = type))+
-  geom_point(size=2.5,alpha=.7)+
+p2 <- ggplot(water.all, aes(x=TSS.mg.L, y=MeHg.water.ng.L))+
+  geom_point(size=2.5,alpha=.7, aes(color = Site.type))+
   #labs(y="MeHg (ng/L)",x="Total Suspended Solids (mg/L)",color="") +
-  labs(y="MeHg (ng/L)",x="TSS (mg/L)",color="") +
+  labs(y="MeHg (ng/L)",x="Sólidos Suspendidos Totales (mg/L)",color="") +
   scale_color_manual(values=cb) +
   scale_x_continuous(trans = 'log10') +
   scale_y_continuous(trans = 'log10') +
@@ -301,7 +305,8 @@ p2 <- ggplot(check, aes(x=TSS.mg.L, y=MeHg.water.ng.L, color = type))+
                   parse = TRUE) +
     theme_bw()
 
-g <- ggpubr::ggarrange(p1, p2,nrow=1,ncol=2,common.legend=TRUE)
+lg <- ggpubr::get_legend(p1)
+g <- ggpubr::ggarrange(p1, p2,nrow=1,ncol=2, common.legend=TRUE, legend.grob = lg)
 g
 
 ggsave('figures/Spanish/TSSvTHgvMeHgLog.png', plot = g, width = 7, height = 3, units = 'in', dpi = 600)

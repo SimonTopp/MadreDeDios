@@ -42,7 +42,7 @@ hsPeru <- read_csv('out/MdD_Hydroscape_TS_DL_Riv_Global.csv') %>%
   mutate(nonRivArea = waterArea - rivArea) %>%
   gather('feature', 'area', cl, rivArea, waterArea, nonRivArea) %>%
   mutate(Basin = ifelse(BasinID == 6080540660, 'Upstream Manu', 
-                    ifelse(BasinID == 6080548660, 'Conservacion Area',
+                    ifelse(BasinID == 6080548660, 'Conservation Area',
                      #ifelse(BasinID == 6080540560, 'UpstreamManuNorth',
                       ifelse(BasinID == 6080549240, 'Manu - Co.',
                         ifelse(BasinID == 6080549470, 'Colorado',
@@ -60,7 +60,7 @@ hsPeru <- read_csv('out/MdD_Hydroscape_TS_DL_Riv_Global.csv') %>%
 ##Figure 1B:  Lotic vs Lentic change over time
 hsPeru %>% filter(!feature %in% c('cl', 'waterArea')) %>%
   mutate(feature = factor(feature, levels = c('rivArea', 'nonRivArea'), labels = c('Lotic', 'Lentic')),
-         Basin = factor(Basin, levels = c('Upstream Manu', 'Manu - Co.', 'Colorado', 'Co.- In. West',  'Conservacion Area', 'Co.- In. East', 'Inambari', 'In.- Puerto'))) %>%
+         Basin = factor(Basin, levels = c('Upstream Manu', 'Manu - Co.', 'Colorado', 'Co.- In. West',  'Conservation Area', 'Co.- In. East', 'Inambari', 'In.- Puerto'))) %>%
   ggplot(., aes(x = year, y = area.percent, color = feature)) + 
   geom_point(alpha = .4) + 
   geom_smooth(se = F, span = .2) + 
@@ -124,13 +124,13 @@ hsPeru %>%
 #basin <- read.csv('out/Basin_Deforestation_RivRemoved.csv') %>%
 basin <- read.csv('out/Basin_Deforestation_Lagged.csv') %>%
   select(BasinID, year, area, feature) %>%
-  mutate(Basin = ifelse(BasinID == 6080540660, 'Upstream Manu', #'Arriba de Manu',
-                        ifelse(BasinID == 6080548660,'Conservation Area', #'Área de conservación',
+  mutate(Basin = ifelse(BasinID == 6080540660, 'Manu Aguas Arriba',#'Upstream Manu', 
+                        ifelse(BasinID == 6080548660,'Área de Conservación',#'Conservation Area', 
                                ifelse(BasinID == 6080540560, 'UpstreamManuNorth',
                                 ifelse(BasinID == 6080549240, 'Manu - Co.',
                                   ifelse(BasinID == 6080549470, 'Colorado',
-                                   ifelse(BasinID == 6080548950, 'Co.- In. West',
-                                      ifelse(BasinID == 6080552360, 'Co.- In. East',
+                                   ifelse(BasinID == 6080548950, 'Co.- In. Oeste', #'Co.- In. West',
+                                      ifelse(BasinID == 6080552360, 'Co.- In. Este', #'Co.- In. East',
                                         ifelse(BasinID == 6080552520, 'Inambari','In.- Puerto')))))))),
          area.km = area/1000000) %>%
   group_by(BasinID, Basin, feature) %>%
@@ -154,14 +154,14 @@ p2 <- ggplot(basin %>% filter(feature == 'ForestToWater'),
 
 leg <- cowplot::get_legend(ggplot(basin, aes(x = year, y = cumulative)) + 
   geom_col(aes(fill = feature)) +
-  #scale_fill_manual('Tipo de\nConversión', values = c('#5d4235','#1e96a6'), labels = c('A Estéril', 'A Agua')))
-  scale_fill_manual('Conversion\nType', values = c('#5d4235','#1e96a6'), labels = c('To Barren', 'To Water'))) 
+  scale_fill_manual('Tipo de\nConversión', values = c('#5d4235','#1e96a6'), labels = c('A Terreno\nBaldío', 'A Agua')))
+  #scale_fill_manual('Conversion\nType', values = c('#5d4235','#1e96a6'), labels = c('To Barren', 'To Water'))) 
 
 g <- gridExtra::grid.arrange(p1, p2, leg, ncol = 3, widths = c(1,1,.5), left = 'Cumulative Forest Loss (sq. km.)', bottom = 'Year', top = 'Forest Loss by Watershed') 
 
-#g <- gridExtra::grid.arrange(p1, p2, leg, ncol = 3, widths = c(1,1,.5), left = grid::textGrob(bquote('Pérdida acumulada de bosques ('~km^2*')'), rot = 90), bottom = 'Año', top = 'Pérdida de Bosques por Cuenca') 
+g <- gridExtra::grid.arrange(p1, p2, leg, ncol = 3, widths = c(1,1,.5), left = grid::textGrob(bquote('Pérdida de Bosques Acumulada ('~km^2*')'), rot = 90), bottom = 'Año', top = 'Pérdida de Bosques por Cuenca') 
 
-ggsave('figures/Final/cumForestLoss_wRiv.png', g, height = 8, width = 5, units = 'in', dpi = 600)
+ggsave('figures/Spanish/cumForestLoss_wRiv.png', g, height = 8, width = 5, units = 'in', dpi = 600)
 
 ## Look at proportion converted to an aquatic system by watershed
 PropConv <- basin %>% filter(year == 2018) %>%
@@ -392,12 +392,11 @@ ggmap::ggmap(sq_hybrid, darken = c(0.1, "white")) +
   geom_sf(data = fig2images, aes(color = Site.type, fill = Site.type),
           inherit.aes = F) +
   ggthemes::theme_map() + 
-  theme(legend.position = c(0.7,0.55)) + 
-  scale_color_manual(values = c('red', colors),
-                     labels = c('Fig.1 Sitios de\nImágenes',
-                                "Río\nArriba", "Cocha\nArriba", 
-                                "Estanque\nMinero", "Río\nAbajo", 
-                                "Cocha\nAbajo")) +
+  theme(legend.position = c(0.65,0.55)) + 
+  scale_color_manual(values = c(colors, 'red'),
+                     labels = c("Río Arriba", "Lagos de Meandros\nRío Arriba", 
+                                "Pozas de\nMinero", "Río Abajo", 
+                                "Lagos de Meandros\nRío Abajo", 'Imagen de\nLocaciones Fig. 1')) +
    scale_fill_manual(values = c('red', colors),
                      labels = c('Fig.1 Sitios de\nImágenes',
                                 "Río\nArriba", "Cocha\nArriba", 
@@ -407,7 +406,7 @@ ggmap::ggmap(sq_hybrid, darken = c(0.1, "white")) +
   labs(fill = 'Sitios de Muestras', color= 'Sitios de Muestras') 
 
 
-ggsave('figures/Final/SampleSitesv2.png', width = 4, height = 4, units ='in', dpi = 600)
+ggsave('figures/Spanish/SampleSitesv2.png', width = 4, height = 4, units ='in', dpi = 600)
 
 ```
 
