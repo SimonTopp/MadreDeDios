@@ -41,6 +41,10 @@ fig.labels <- c("River\nUpstream","Oxbow\nUpstream","Mining\nPond","River\nDowns
 water.labels <- c("Río Arriba", "Lagos de Meandros Río Arriba", "Pozas de Minero", "Río Abajo", "Lagos de Meandros Río Abajo")
 fig.labels <- c("Río Arriba","Lagos de Meandros\nRío Arriba","Pozas de\nMinero","Río Abajo", "Lagos de Meandros\nRío Abajo")
 
+## Finally alternate labels for briefing
+water.labels <- c("River Upstream", "Lake Upstream", "Mining Pond", "River Downstream", "Lake Downstream")
+fig.labels <- c("River\nUpstream","Oxbow\nUpstream","Mining\nPond","River\nDownstream","Oxbow\nDownstream")
+
 water.all<-rbind(oxbow.mining.all,river.all.subset) %>%
   mutate(Site.type = factor(Site.type, levels = c("river.upstream", "oxbow.lake.upstream", "mining.pond", "river.downstream", "oxbow.lake.downstream"), labels = water.labels))
 ```
@@ -57,7 +61,8 @@ tukeyThg <- tibble(Site.type = water.labels, TukeyStats = c('a','a','ab','b','a'
 g1<-ggplot(water.all,aes(x=Site.type, y=THg.water.ng.L)) + 
   geom_boxplot(aes(fill=Site.type)) +
   geom_label(data = tukeyThg, aes(y = Inf, label = TukeyStats), vjust = 2, label.size = .2) +
-  labs(x="",y="THg (ng/L)") + 
+  #labs(x="",y="THg (ng/L)") + 
+  labs(x="",y="HgT (ng/L)") + 
   scale_y_continuous(trans = 'log10') +
   theme_bw() + 
   theme(axis.text.x=element_blank(),
