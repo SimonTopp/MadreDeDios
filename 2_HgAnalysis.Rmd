@@ -43,7 +43,7 @@ fig.labels <- c("Río Arriba","Lagos de Meandros\nRío Arriba","Pozas de\nMinero
 
 ## Finally alternate labels for briefing
 water.labels <- c("River Upstream", "Lake Upstream", "Mining Pond", "River Downstream", "Lake Downstream")
-fig.labels <- c("River\nUpstream","Oxbow\nUpstream","Mining\nPond","River\nDownstream","Oxbow\nDownstream")
+fig.labels <- c("River\nUpstream","Lake\nUpstream","Mining\nPond","River\nDownstream","Lake\nDownstream")
 
 water.all<-rbind(oxbow.mining.all,river.all.subset) %>%
   mutate(Site.type = factor(Site.type, levels = c("river.upstream", "oxbow.lake.upstream", "mining.pond", "river.downstream", "oxbow.lake.downstream"), labels = water.labels))

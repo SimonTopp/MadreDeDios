@@ -1,0 +1,159 @@
+---
+title: "Briefing_Figures"
+author: "Simon Topp"
+date: "9/8/2020"
+output: html_document
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r setup, include=FALSE}
+library(tidyverse)
+
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## R Markdown
+
+This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+
+When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+
+```{r cars}
+hsPeru %>% filter(feature == 'nonRivArea') %>%
+  mutate(feature == 'Lake Area',
+         Mining = ifelse(Basin %in% c('Inambari', 'Colorado'), 'Heavy', 'Minor')) %>%
+  ggplot(., aes(x = year, y = area.percent, color = Mining, group = Basin)) + 
+  geom_point(alpha = .4) + 
+  geom_line() +
+  #geom_smooth(se = F, span = .2) + 
+  #scale_color_viridis_d(end = .6, direction = -1)  +
+  scale_color_manual(values = c('red', 'black')) +
+  scale_y_continuous(labels = scales::percent) +
+  theme_bw() +
+  labs(x = 'Year', y = 'Percent Lentic System Area Change', color = 'Mining Activity',
+       title = 'Lentic System Area\nChange Over Time') + 
+  theme(legend.position = 'bottom')
+
+ggsave('Figures/Briefing/LakeAreaByWatershed.pdf', width = 3.5, height = 3.5, units = 'in', dpi = 600)
+
+
+hsPeru %>% filter(feature == 'nonRivArea') %>%
+  mutate(feature == 'Lake Area',
+         Mining = ifelse(Basin %in% c('Inambari', 'Colorado'), 'Pasada', 'Menor')) %>%
+  ggplot(., aes(x = year, y = area.percent, color = Mining, group = Basin)) + 
+  geom_point(alpha = .4) + 
+  geom_line() +
+  #geom_smooth(se = F, span = .2) + 
+  #scale_color_viridis_d(end = .6, direction = -1)  +
+  scale_color_manual(values = c('red', 'black')) +
+  scale_y_continuous(labels = scales::percent) +
+  theme_bw() +
+  labs(x = 'Año', y = 'Percentaje de Cambio en Àrea de Lagos', color = 'Actividad Minera',
+       title = 'Distribución Temporal\nde Extensiones de Lagos') + 
+  theme(legend.position = 'bottom')
+
+ggsave('Figures/Briefing/LakeAreaByWatershed_Spanish.pdf', width = 3.5, height = 3.5, units = 'in', dpi = 600)
+```
+
+## Including Plots
+
+```{r pressure, echo=FALSE}
+waterSumm <- water.all %>%
+  mutate(Percent.MeHg.water = Percent.MeHg.water/100) %>%
+  group_by(Site.type) %>%
+  summarise_at(vars(THg.water.ng.L, Percent.MeHg.water), c(mean = ~mean(., na.rm = T), se = ~sd(., na.rm = T)/sqrt(sum(!is.na(.)))))
+
+
+ggplot(waterSumm, aes(x=Site.type)) + 
+  geom_col(aes(fill=Site.type, y = THg.water.ng.L_mean)) +
+  geom_errorbar(aes(ymax = THg.water.ng.L_mean + THg.water.ng.L_se, 
+                    ymin = THg.water.ng.L_mean - THg.water.ng.L_se), width = .2) +
+  #geom_label(data = tukeyThg, aes(y = Inf, label = TukeyStats), vjust = 2, label.size = .2) +
+  labs(x="Waterbody Type",y="Total Mercury (ng/L)", title = 'Mercury Concentration\nby Water Type') + 
+  #scale_y_continuous(trans = 'log10') +
+  theme_bw() + 
+  theme(legend.position='none',
+        axis.text.x = element_text(angle = 27, hjust = 1)) + 
+  scale_fill_manual(values=cb) +
+  scale_x_discrete(labels = fig.labels)
+
+
+ggsave('figures/Briefing/THg.png', width = 3, height = 3, units = 'in', dpi = 600)
+
+## Spanish
+ggplot(waterSumm, aes(x=Site.type)) + 
+  geom_col(aes(fill=Site.type, y = THg.water.ng.L_mean)) +
+  geom_errorbar(aes(ymax = THg.water.ng.L_mean + THg.water.ng.L_se, 
+                    ymin = THg.water.ng.L_mean - THg.water.ng.L_se), width = .2) +
+  #geom_label(data = tukeyThg, aes(y = Inf, label = TukeyStats), vjust = 2, label.size = .2) +
+  labs(x="Tipo de Agua Superficial",y="Hg Total (ng/L)", title = 'Concentracion de Mercurio\nde Tipo de Agua') + 
+  scale_x_discrete(labels = fig.labels) +
+  theme_bw() + 
+  theme(legend.position='none',
+        axis.text.x = element_text(angle = 27, hjust = 1)) + 
+  scale_fill_manual(values=cb)
+
+ggsave('figures/Briefing/THg_Spanish.pdf', width = 3.5, height = 3.5, units = 'in', dpi = 600)
+
+
+ggplot(waterSumm, aes(x=Site.type)) + 
+  geom_col(aes(fill=Site.type, y = Percent.MeHg.water_mean)) +
+  geom_errorbar(aes(ymax = Percent.MeHg.water_mean + Percent.MeHg.water_se, 
+                    ymin = Percent.MeHg.water_mean - Percent.MeHg.water_se), width = .2) +
+  #geom_label(data = tukeyThg, aes(y = Inf, label = TukeyStats), vjust = 2, label.size = .2) +
+  labs(x="Waterbody Type",y="Percent Methylmercury", title = 'Proportion Methylmercury\nby Water Type') + 
+  scale_y_continuous(labels = scales::percent) +
+  theme_bw() + 
+  theme(legend.position='none',
+        axis.text.x = element_text(angle = 27, hjust = 1)) + 
+  scale_fill_manual(values=cb) + 
+  scale_x_discrete(labels = fig.labels) +
+  labs(fill="") 
+
+ggsave('figures/Briefing/pMeHg.png', width = 3, height = 3, units = 'in', dpi = 600)
+
+## Spanish
+
+ggplot(waterSumm, aes(x=Site.type)) + 
+  geom_col(aes(fill=Site.type, y = Percent.MeHg.water_mean)) +
+  geom_errorbar(aes(ymax = Percent.MeHg.water_mean + Percent.MeHg.water_se, 
+                    ymin = Percent.MeHg.water_mean - Percent.MeHg.water_se), width = .2) +
+  #geom_label(data = tukeyThg, aes(y = Inf, label = TukeyStats), vjust = 2, label.size = .2) +
+  labs(x="Tipo de Agua Superficial",y="Percentaje de Metilmercurio", title = 'Percentaje de Metilmercurio\nde Tipo de Agua') + 
+  scale_y_continuous(labels = scales::percent) +
+  scale_x_discrete(labels = fig.labels) +
+  theme_bw() + 
+  theme(legend.position='none',
+        axis.text.x = element_text(angle = 27, hjust = 1)) + 
+  scale_fill_manual(values=cb) + 
+  labs(fill="") 
+
+ggsave('figures/Briefing/pMeHg_Spanish.pdf', width = 3.5, height = 3.5, units = 'in', dpi = 600)
+```
+
+
+```{r}
+library(ggmap)
+## Bring in google basemap imagery
+sq_map <- get_map(location = c(lon = -70.3733, lat = -12.6302), zoom = 8, source ='google', maptype = "satellite")
+
+## Convert the Peru Raster to a dataframe
+stack <-  RStoolbox::ggR(peruStack, ggObj = FALSE) %>%
+  #na.omit() %>%
+  rename(lon = x, lat = y)
+
+## Create map with basins, the peruStack, and imagery
+ggmap::ggmap(sq_map, darken = c(0.1, "white")) + 
+  geom_raster(data = stack, aes(x = lon, y = lat, fill = value), interpolate = T) +
+  #geom_sf(data = basins.sf %>% st_transform(crs = 4326), aes(color = Mined), inherit.aes = F, fill = 'transparent') + 
+  coord_cartesian() +
+  coord_sf(crs = 4326, xlim = c(-71.381, -69.2331), ylim = c(-13.1649, -12.2164)) +
+  #scale_color_manual('Mining Activity', values = c('#2da8d8ff', '#d9514eff'), labels = c('Minor', 'Heavy')) +
+  scale_fill_viridis_c('Year', option = 'plasma', direction = -1, na.value="transparent") + 
+  theme_void() +
+  theme(legend.position = 'none')
+
+ggsave('figures/Briefing/perStack.png', width = 6.5, units = 'in', dpi = 600)
+```
+
